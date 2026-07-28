@@ -3,12 +3,12 @@ version: "3.8"
 services:
   postgres:
     image: postgres:15-alpine
-    container_name: creator_os_postgres
+    container_name: ownstall_postgres
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: creator_os_dev
+      POSTGRES_DB: ownstall_dev
     ports:
       - "5432:5432"
     volumes:
@@ -16,7 +16,7 @@ services:
       # Auto-runs any .sql files on first container creation
       - ./backend/migrations:/docker-entrypoint-initdb.d
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d creator_os_dev"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ownstall_dev"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -24,7 +24,7 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: creator_os_redis
+    container_name: ownstall_redis
     restart: unless-stopped
     ports:
       - "6379:6379"
@@ -40,7 +40,7 @@ services:
   # Optional: Redis GUI (comment out if you don't want it)
   redis-commander:
     image: rediscommander/redis-commander:latest
-    container_name: creator_os_redis_gui
+    container_name: ownstall_redis_gui
     restart: unless-stopped
     environment:
       REDIS_HOSTS: local:redis:6379
