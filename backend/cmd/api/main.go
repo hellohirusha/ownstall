@@ -71,6 +71,18 @@ func main() {
 	checkoutHandler := &handlers.CheckoutHandler{DB: db, Email: emailService}
 	uploadHandler := &handlers.UploadHandler{Storage: storage.NewCloudinaryService()}
 
+	// Campaign scheduler — dispatches due campaigns every 60 seconds
+	campaignService := &services.CampaignService{DB: db, Queue: queueClient}
+	go func() {
+		ticker := time.NewTicker(60 * time.Second)
+		defer ticker.Stop()
+		for range ticker.C {
+			if err := campaignService.ProcessDueCampaigns(context.Background()); err != nil {
+				log.Printf("campaign scheduler: %v", err)
+			}
+		}
+	}()
+
 	r.Route("/api", func(r chi.Router) {
 		r.Post("/signup", authHandler.Signup)
 		r.Post("/login", authHandler.Login)
@@ -88,6 +100,11 @@ func main() {
 
 	// Webhooks - NO auth middleware (Stripe calls these directly)
 	r.Post("/webhooks/stripe", checkoutHandler.HandleStripeWebhook)
+
+	// Email tracking - NO auth (mail clients load the pixel, Resend posts events)
+	trackingHandler := &handlers.EmailTrackingHandler{DB: db}
+	r.Get("/webhooks/email/open", trackingHandler.HandleOpen)
+	r.Post("/webhooks/resend", trackingHandler.HandleResendWebhook)
 
 	graphqlHandler := handler.NewDefaultServer(
 		graph.NewExecutableSchema(graph.Config{
