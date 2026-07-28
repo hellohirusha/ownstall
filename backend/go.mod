@@ -10,6 +10,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.10.0
 	github.com/joho/godotenv v1.5.1
+	github.com/redis/go-redis/v9 v9.21.0
 	github.com/stripe/stripe-go/v76 v76.25.0
 	github.com/vektah/gqlparser/v2 v2.5.33
 )
@@ -21,7 +22,6 @@ require (
 	github.com/goccy/go-yaml v1.19.2 // indirect
 	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
-	github.com/redis/go-redis/v9 v9.21.0 // indirect
 	github.com/sosodev/duration v1.4.0 // indirect
 	github.com/urfave/cli/v3 v3.8.0 // indirect
 	go.uber.org/atomic v1.11.0 // indirect

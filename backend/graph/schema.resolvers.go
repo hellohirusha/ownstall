@@ -9,13 +9,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
-
 	"github.com/hellohirusha/creator-os/graph/model"
 	appMiddleware "github.com/hellohirusha/creator-os/internal/middleware"
 	"github.com/hellohirusha/creator-os/internal/services"
+	pgx "github.com/jackc/pgx/v5"
 )
 
 // Login is the resolver for the login field.
@@ -105,6 +105,55 @@ func (r *mutationResolver) AddProductImage(ctx context.Context, productID uuid.U
 		AltText:  altText,
 		Position: position,
 	}, nil
+}
+
+// CreateCampaign creates a draft campaign from one of the tenant's templates
+func (r *mutationResolver) CreateCampaign(ctx context.Context, input model.CreateCampaignInput) (*model.EmailCampaign, error) {
+	tenantID := appMiddleware.GetTenantID(ctx)
+	if tenantID == "" {
+		return nil, fmt.Errorf("unauthorized")
+	}
+
+	// The join enforces that the template belongs to this tenant
+	var id string
+	err := r.DB.QueryRow(ctx, `
+        INSERT INTO email_campaigns (tenant_id, template_id, name, subject, recipient_type, status)
+        SELECT $1, t.id, $3, $4, 'all', 'draft'
+        FROM email_templates t
+        WHERE t.id = $2 AND t.tenant_id = $1
+        RETURNING id
+    `, tenantID, input.TemplateID.String(), input.Name, input.Subject).Scan(&id)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, fmt.Errorf("template not found")
+		}
+		return nil, fmt.Errorf("failed to create campaign: %w", err)
+	}
+
+	return r.fetchCampaign(ctx, tenantID, id)
+}
+
+// ScheduleCampaign queues a draft campaign for the scheduler.
+// sendAt omitted/nil = due immediately (picked up on the next tick).
+func (r *mutationResolver) ScheduleCampaign(ctx context.Context, id uuid.UUID, sendAt *time.Time) (*model.EmailCampaign, error) {
+	tenantID := appMiddleware.GetTenantID(ctx)
+	if tenantID == "" {
+		return nil, fmt.Errorf("unauthorized")
+	}
+
+	tag, err := r.DB.Exec(ctx, `
+        UPDATE email_campaigns
+        SET status = 'scheduled', scheduled_at = COALESCE($3, NOW())
+        WHERE id = $1 AND tenant_id = $2 AND status IN ('draft', 'scheduled')
+    `, id.String(), tenantID, sendAt)
+	if err != nil {
+		return nil, fmt.Errorf("failed to schedule campaign: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return nil, fmt.Errorf("campaign not found or already sending")
+	}
+
+	return r.fetchCampaign(ctx, tenantID, id.String())
 }
 
 // Me is the resolver for the me field.
@@ -275,6 +324,66 @@ func (r *queryResolver) Orders(ctx context.Context, status *string) ([]*model.Or
 // Order is the resolver for the order field.
 func (r *queryResolver) Order(ctx context.Context, id uuid.UUID) (*model.Order, error) {
 	panic(fmt.Errorf("not implemented: Order - order"))
+}
+
+// EmailTemplates lists the authenticated tenant's email templates
+func (r *queryResolver) EmailTemplates(ctx context.Context) ([]*model.EmailTemplate, error) {
+	tenantID := appMiddleware.GetTenantID(ctx)
+	if tenantID == "" {
+		return nil, fmt.Errorf("unauthorized")
+	}
+
+	rows, err := r.DB.Query(ctx, `
+        SELECT id, name, slug, description, subject, is_system, created_at
+        FROM email_templates
+        WHERE tenant_id = $1
+        ORDER BY created_at ASC, name ASC
+    `, tenantID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query templates: %w", err)
+	}
+	defer rows.Close()
+
+	var templates []*model.EmailTemplate
+	for rows.Next() {
+		var t model.EmailTemplate
+		var id string
+		if err := rows.Scan(&id, &t.Name, &t.Slug, &t.Description, &t.Subject, &t.IsSystem, &t.CreatedAt); err != nil {
+			return nil, fmt.Errorf("failed to scan template row: %w", err)
+		}
+		t.ID = parseUUID(id)
+		templates = append(templates, &t)
+	}
+	return templates, nil
+}
+
+// EmailCampaigns lists the authenticated tenant's campaigns with live stats
+func (r *queryResolver) EmailCampaigns(ctx context.Context) ([]*model.EmailCampaign, error) {
+	tenantID := appMiddleware.GetTenantID(ctx)
+	if tenantID == "" {
+		return nil, fmt.Errorf("unauthorized")
+	}
+
+	rows, err := r.DB.Query(ctx, `
+        SELECT `+campaignColumns+`
+        FROM email_campaigns c
+        WHERE c.tenant_id = $1
+        ORDER BY c.created_at DESC
+    `, tenantID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query campaigns: %w", err)
+	}
+	defer rows.Close()
+
+	var campaigns []*model.EmailCampaign
+	for rows.Next() {
+		c, err := scanCampaign(rows)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan campaign row: %w", err)
+		}
+		campaigns = append(campaigns, c)
+	}
+	return campaigns, nil
 }
 
 // Mutation returns MutationResolver implementation.
