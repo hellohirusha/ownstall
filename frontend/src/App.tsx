@@ -5,6 +5,9 @@ import { ProductsPage } from "./pages/admin/Products";
 import { NewProductPage } from "./pages/admin/NewProduct";
 import { OrdersPage } from "./pages/admin/Orders";
 import { NotifyPage } from "./pages/admin/Notify";
+import { ReplyPage } from "./pages/admin/Reply";
+import { ReplyMetricsPage } from "./pages/admin/ReplyMetrics";
+import { TicketDetailPage } from "./pages/admin/TicketDetail";
 import { StorefrontPage } from "./pages/store/Storefront";
 import { ProductDetailPage } from "./pages/store/ProductDetail";
 import { CartPage } from "./pages/store/Cart";
@@ -28,6 +31,10 @@ function App() {
       />
       <Route path="/admin/orders" element={<OrdersPage />} />
       <Route path="/admin/notify" element={<NotifyPage />} />
+      <Route path="/admin/reply" element={<ReplyPage />} />
+      {/* Static segment outranks :id in v7 route ranking */}
+      <Route path="/admin/reply/metrics" element={<ReplyMetricsPage />} />
+      <Route path="/admin/reply/:id" element={<TicketDetailPage />} />
 
       {/* Storefront (shoppers) */}
       <Route path="/store" element={<StorefrontPage />} />
