@@ -97,6 +97,10 @@ func (h *AuthHandler) Signup(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("Warning: failed to seed email templates:", err)
 	}
 
+	if err := services.SeedCannedResponses(r.Context(), h.DB, tenantID); err != nil {
+		fmt.Println("Warning: failed to seed canned responses:", err)
+	}
+
 	accessToken, err := auth.GenerateAccessToken(userID, tenantID, req.Email, "owner")
 	if err != nil {
 		http.Error(w, `{"error":"failed to generate token"}`, http.StatusInternalServerError)
