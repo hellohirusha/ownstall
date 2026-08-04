@@ -1,4 +1,4 @@
-# CreatorOS
+# Ownstall
 
 > Multi-tenant commerce platform — every creator gets their own storefront under one roof.
 > Built with Go, GraphQL, React, TypeScript, and Postgres.
@@ -15,8 +15,8 @@
 
 **Live demo**
 
-- API: `https://creator-os.up.railway.app/health`
-- Web: `https://hiru-creator-os.vercel.app`
+- API: `https://ownstall.up.railway.app/health`
+- Web: `https://ownstall.vercel.app`
 
 ## Architecture
 
@@ -49,7 +49,7 @@ every tenant's rows are isolated by a session-scoped `app.current_tenant_id` set
 ## Project structure
 
 ```
-creator-os/
+ownstall/
 ├── backend/            Go API (Chi router, gqlgen GraphQL, handlers, services)
 │   ├── cmd/api/        Entrypoint
 │   ├── graph/          GraphQL schema + resolvers
@@ -75,8 +75,8 @@ creator-os/
 
 ```powershell
 # Clone
-git clone https://github.com/hellohirusha/creator-os.git
-cd creator-os
+git clone https://github.com/hellohirusha/ownstall.git
+cd ownstall
 
 # Start local Postgres + Redis
 docker compose up -d
@@ -171,13 +171,13 @@ touching `backend/**` on `develop`/`main`, and **deploys to Railway only from `m
    backend variable above. `DATABASE_URL` references the Railway Postgres.
    `ENVIRONMENT=production`. `FRONTEND_URL=<your Vercel URL>`.
 3. **Production Stripe webhook** — Stripe Dashboard → _Developers → Webhooks → Add endpoint_:
-   - URL: `https://creator-os.up.railway.app/webhooks/stripe`
+   - URL: `https://ownstall.up.railway.app/webhooks/stripe`
    - Events: `checkout.session.completed`, `checkout.session.expired`, `payment_intent.payment_failed`
    - Copy the endpoint's `whsec_…` → Railway variable `STRIPE_WEBHOOK_SECRET`.
      (The Stripe **CLI** secret only works locally.)
 4. **Deploy** — merge `develop` → `main` (or run the workflow manually). Migrations
    run automatically on boot.
-5. **Verify** — `https://creator-os.up.railway.app/health` returns `{"status":"ok",...}`.
+5. **Verify** — `https://ownstall.up.railway.app/health` returns `{"status":"ok",...}`.
 
 ### Frontend → Vercel
 
@@ -190,8 +190,8 @@ vercel --prod
 ```
 
 1. Vercel dashboard → project → _Settings → Environment Variables_ (Production):
-   `REACT_APP_API_URL=https://creator-os.up.railway.app`,
-   `REACT_APP_GRAPHQL_URL=https://creator-os.up.railway.app/query`,
+   `REACT_APP_API_URL=https://ownstall.up.railway.app`,
+   `REACT_APP_GRAPHQL_URL=https://ownstall.up.railway.app/query`,
    `REACT_APP_STRIPE_PUBLISHABLE_KEY=pk_test_…`
 2. Redeploy (`vercel --prod`) so the build picks the variables up.
 3. Add a SPA rewrite so deep links like `/admin/products` don't 404 —
@@ -217,7 +217,7 @@ vercel --prod
   (resolver implementations belong in `schema.resolvers.go`; gqlgen copies them through).
 - **Backend tests** — `cd backend; go test ./...` (CI runs them against Postgres 15).
 - **Local DB GUI** — Redis Commander at `http://localhost:8081`; use any Postgres client
-  against `postgresql://postgres:postgres@localhost:5432/creator_os_dev`.
+  against `postgresql://postgres:postgres@localhost:5432/ownstall_dev`.
 
 ## License
 

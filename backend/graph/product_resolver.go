@@ -3,8 +3,8 @@ package graph
 import (
 	"github.com/google/uuid"
 
-	"github.com/hellohirusha/creator-os/graph/model"
-	"github.com/hellohirusha/creator-os/internal/models"
+	"github.com/hellohirusha/ownstall/graph/model"
+	"github.com/hellohirusha/ownstall/internal/models"
 )
 
 func stringValue(s *string) string {

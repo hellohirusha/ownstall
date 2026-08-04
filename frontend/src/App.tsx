@@ -4,6 +4,7 @@ import { Signup } from "./pages/auth/Signup";
 import { ProductsPage } from "./pages/admin/Products";
 import { NewProductPage } from "./pages/admin/NewProduct";
 import { OrdersPage } from "./pages/admin/Orders";
+import { NotifyPage } from "./pages/admin/Notify";
 import { StorefrontPage } from "./pages/store/Storefront";
 import { ProductDetailPage } from "./pages/store/ProductDetail";
 import { CartPage } from "./pages/store/Cart";
@@ -26,6 +27,7 @@ function App() {
         element={<Navigate to="/admin/products" replace />}
       />
       <Route path="/admin/orders" element={<OrdersPage />} />
+      <Route path="/admin/notify" element={<NotifyPage />} />
 
       {/* Storefront (shoppers) */}
       <Route path="/store" element={<StorefrontPage />} />

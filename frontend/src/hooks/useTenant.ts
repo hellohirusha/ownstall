@@ -20,7 +20,7 @@ export function useTenant() {
     new URLSearchParams(window.location.search).get("store") || "";
 
   if (!subdomain) {
-    const parts = window.location.hostname.split("."); // e.g. "teststore.creatorOS.app"
+    const parts = window.location.hostname.split("."); // e.g. "teststore.ownstall.app"
     if (parts.length >= 3) {
       subdomain = parts[0]; // "teststore"
     } else {

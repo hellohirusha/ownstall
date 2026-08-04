@@ -16,7 +16,7 @@ import (
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/99designs/gqlgen/graphql/introspection"
 	"github.com/google/uuid"
-	"github.com/hellohirusha/creator-os/graph/model"
+	"github.com/hellohirusha/ownstall/graph/model"
 	gqlparser "github.com/vektah/gqlparser/v2"
 	"github.com/vektah/gqlparser/v2/ast"
 )
@@ -46,15 +46,45 @@ type ComplexityRoot struct {
 		User         func(childComplexity int) int
 	}
 
+	EmailCampaign struct {
+		ClickedCount   func(childComplexity int) int
+		CompletedAt    func(childComplexity int) int
+		CreatedAt      func(childComplexity int) int
+		DeliveredCount func(childComplexity int) int
+		ID             func(childComplexity int) int
+		Name           func(childComplexity int) int
+		OpenedCount    func(childComplexity int) int
+		RecipientCount func(childComplexity int) int
+		RecipientType  func(childComplexity int) int
+		ScheduledAt    func(childComplexity int) int
+		SentCount      func(childComplexity int) int
+		StartedAt      func(childComplexity int) int
+		Status         func(childComplexity int) int
+		Subject        func(childComplexity int) int
+		TemplateID     func(childComplexity int) int
+	}
+
+	EmailTemplate struct {
+		CreatedAt   func(childComplexity int) int
+		Description func(childComplexity int) int
+		ID          func(childComplexity int) int
+		IsSystem    func(childComplexity int) int
+		Name        func(childComplexity int) int
+		Slug        func(childComplexity int) int
+		Subject     func(childComplexity int) int
+	}
+
 	Mutation struct {
-		AddProductImage func(childComplexity int, productID uuid.UUID, url string, altText *string) int
-		CreateProduct   func(childComplexity int, input model.CreateProductInput) int
-		DeleteProduct   func(childComplexity int, id uuid.UUID) int
-		Login           func(childComplexity int, email string, password string) int
-		PublishProduct  func(childComplexity int, id uuid.UUID) int
-		Signup          func(childComplexity int, storeName string, subdomain string, email string, password string) int
-		UpdateProduct   func(childComplexity int, id uuid.UUID, input model.UpdateProductInput) int
-		UpdateProfile   func(childComplexity int, firstName *string, lastName *string) int
+		AddProductImage  func(childComplexity int, productID uuid.UUID, url string, altText *string) int
+		CreateCampaign   func(childComplexity int, input model.CreateCampaignInput) int
+		CreateProduct    func(childComplexity int, input model.CreateProductInput) int
+		DeleteProduct    func(childComplexity int, id uuid.UUID) int
+		Login            func(childComplexity int, email string, password string) int
+		PublishProduct   func(childComplexity int, id uuid.UUID) int
+		ScheduleCampaign func(childComplexity int, id uuid.UUID, sendAt *time.Time) int
+		Signup           func(childComplexity int, storeName string, subdomain string, email string, password string) int
+		UpdateProduct    func(childComplexity int, id uuid.UUID, input model.UpdateProductInput) int
+		UpdateProfile    func(childComplexity int, firstName *string, lastName *string) int
 	}
 
 	Order struct {
@@ -120,13 +150,15 @@ type ComplexityRoot struct {
 	}
 
 	Query struct {
-		Me            func(childComplexity int) int
-		Order         func(childComplexity int, id uuid.UUID) int
-		Orders        func(childComplexity int, status *string) int
-		Product       func(childComplexity int, id string) int
-		ProductBySlug func(childComplexity int, tenantID uuid.UUID, slug string) int
-		Products      func(childComplexity int, tenantID *uuid.UUID, status *string) int
-		Tenant        func(childComplexity int, subdomain string) int
+		EmailCampaigns func(childComplexity int) int
+		EmailTemplates func(childComplexity int) int
+		Me             func(childComplexity int) int
+		Order          func(childComplexity int, id uuid.UUID) int
+		Orders         func(childComplexity int, status *string) int
+		Product        func(childComplexity int, id string) int
+		ProductBySlug  func(childComplexity int, tenantID uuid.UUID, slug string) int
+		Products       func(childComplexity int, tenantID *uuid.UUID, status *string) int
+		Tenant         func(childComplexity int, subdomain string) int
 	}
 
 	Tenant struct {
@@ -157,6 +189,8 @@ type MutationResolver interface {
 	DeleteProduct(ctx context.Context, id uuid.UUID) (bool, error)
 	PublishProduct(ctx context.Context, id uuid.UUID) (*model.Product, error)
 	AddProductImage(ctx context.Context, productID uuid.UUID, url string, altText *string) (*model.ProductImage, error)
+	CreateCampaign(ctx context.Context, input model.CreateCampaignInput) (*model.EmailCampaign, error)
+	ScheduleCampaign(ctx context.Context, id uuid.UUID, sendAt *time.Time) (*model.EmailCampaign, error)
 }
 type QueryResolver interface {
 	Me(ctx context.Context) (*model.User, error)
@@ -166,6 +200,8 @@ type QueryResolver interface {
 	ProductBySlug(ctx context.Context, tenantID uuid.UUID, slug string) (*model.Product, error)
 	Orders(ctx context.Context, status *string) ([]*model.Order, error)
 	Order(ctx context.Context, id uuid.UUID) (*model.Order, error)
+	EmailTemplates(ctx context.Context) ([]*model.EmailTemplate, error)
+	EmailCampaigns(ctx context.Context) ([]*model.EmailCampaign, error)
 }
 
 type executableSchema graphql.ExecutableSchemaState[ResolverRoot, DirectiveRoot, ComplexityRoot]
@@ -207,6 +243,140 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.ComplexityRoot.AuthPayload.User(childComplexity), true
 
+	case "EmailCampaign.clickedCount":
+		if e.ComplexityRoot.EmailCampaign.ClickedCount == nil {
+			break
+		}
+
+		return e.ComplexityRoot.EmailCampaign.ClickedCount(childComplexity), true
+	case "EmailCampaign.completedAt":
+		if e.ComplexityRoot.EmailCampaign.CompletedAt == nil {
+			break
+		}
+
+		return e.ComplexityRoot.EmailCampaign.CompletedAt(childComplexity), true
+	case "EmailCampaign.createdAt":
+		if e.ComplexityRoot.EmailCampaign.CreatedAt == nil {
+			break
+		}
+
+		return e.ComplexityRoot.EmailCampaign.CreatedAt(childComplexity), true
+	case "EmailCampaign.deliveredCount":
+		if e.ComplexityRoot.EmailCampaign.DeliveredCount == nil {
+			break
+		}
+
+		return e.ComplexityRoot.EmailCampaign.DeliveredCount(childComplexity), true
+	case "EmailCampaign.id":
+		if e.ComplexityRoot.EmailCampaign.ID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.EmailCampaign.ID(childComplexity), true
+	case "EmailCampaign.name":
+		if e.ComplexityRoot.EmailCampaign.Name == nil {
+			break
+		}
+
+		return e.ComplexityRoot.EmailCampaign.Name(childComplexity), true
+	case "EmailCampaign.openedCount":
+		if e.ComplexityRoot.EmailCampaign.OpenedCount == nil {
+			break
+		}
+
+		return e.ComplexityRoot.EmailCampaign.OpenedCount(childComplexity), true
+	case "EmailCampaign.recipientCount":
+		if e.ComplexityRoot.EmailCampaign.RecipientCount == nil {
+			break
+		}
+
+		return e.ComplexityRoot.EmailCampaign.RecipientCount(childComplexity), true
+	case "EmailCampaign.recipientType":
+		if e.ComplexityRoot.EmailCampaign.RecipientType == nil {
+			break
+		}
+
+		return e.ComplexityRoot.EmailCampaign.RecipientType(childComplexity), true
+	case "EmailCampaign.scheduledAt":
+		if e.ComplexityRoot.EmailCampaign.ScheduledAt == nil {
+			break
+		}
+
+		return e.ComplexityRoot.EmailCampaign.ScheduledAt(childComplexity), true
+	case "EmailCampaign.sentCount":
+		if e.ComplexityRoot.EmailCampaign.SentCount == nil {
+			break
+		}
+
+		return e.ComplexityRoot.EmailCampaign.SentCount(childComplexity), true
+	case "EmailCampaign.startedAt":
+		if e.ComplexityRoot.EmailCampaign.StartedAt == nil {
+			break
+		}
+
+		return e.ComplexityRoot.EmailCampaign.StartedAt(childComplexity), true
+	case "EmailCampaign.status":
+		if e.ComplexityRoot.EmailCampaign.Status == nil {
+			break
+		}
+
+		return e.ComplexityRoot.EmailCampaign.Status(childComplexity), true
+	case "EmailCampaign.subject":
+		if e.ComplexityRoot.EmailCampaign.Subject == nil {
+			break
+		}
+
+		return e.ComplexityRoot.EmailCampaign.Subject(childComplexity), true
+	case "EmailCampaign.templateId":
+		if e.ComplexityRoot.EmailCampaign.TemplateID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.EmailCampaign.TemplateID(childComplexity), true
+
+	case "EmailTemplate.createdAt":
+		if e.ComplexityRoot.EmailTemplate.CreatedAt == nil {
+			break
+		}
+
+		return e.ComplexityRoot.EmailTemplate.CreatedAt(childComplexity), true
+	case "EmailTemplate.description":
+		if e.ComplexityRoot.EmailTemplate.Description == nil {
+			break
+		}
+
+		return e.ComplexityRoot.EmailTemplate.Description(childComplexity), true
+	case "EmailTemplate.id":
+		if e.ComplexityRoot.EmailTemplate.ID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.EmailTemplate.ID(childComplexity), true
+	case "EmailTemplate.isSystem":
+		if e.ComplexityRoot.EmailTemplate.IsSystem == nil {
+			break
+		}
+
+		return e.ComplexityRoot.EmailTemplate.IsSystem(childComplexity), true
+	case "EmailTemplate.name":
+		if e.ComplexityRoot.EmailTemplate.Name == nil {
+			break
+		}
+
+		return e.ComplexityRoot.EmailTemplate.Name(childComplexity), true
+	case "EmailTemplate.slug":
+		if e.ComplexityRoot.EmailTemplate.Slug == nil {
+			break
+		}
+
+		return e.ComplexityRoot.EmailTemplate.Slug(childComplexity), true
+	case "EmailTemplate.subject":
+		if e.ComplexityRoot.EmailTemplate.Subject == nil {
+			break
+		}
+
+		return e.ComplexityRoot.EmailTemplate.Subject(childComplexity), true
+
 	case "Mutation.addProductImage":
 		if e.ComplexityRoot.Mutation.AddProductImage == nil {
 			break
@@ -218,6 +388,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Mutation.AddProductImage(childComplexity, args["productId"].(uuid.UUID), args["url"].(string), args["altText"].(*string)), true
+	case "Mutation.createCampaign":
+		if e.ComplexityRoot.Mutation.CreateCampaign == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_createCampaign_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Mutation.CreateCampaign(childComplexity, args["input"].(model.CreateCampaignInput)), true
 	case "Mutation.createProduct":
 		if e.ComplexityRoot.Mutation.CreateProduct == nil {
 			break
@@ -262,6 +443,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Mutation.PublishProduct(childComplexity, args["id"].(uuid.UUID)), true
+	case "Mutation.scheduleCampaign":
+		if e.ComplexityRoot.Mutation.ScheduleCampaign == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_scheduleCampaign_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Mutation.ScheduleCampaign(childComplexity, args["id"].(uuid.UUID), args["sendAt"].(*time.Time)), true
 	case "Mutation.signup":
 		if e.ComplexityRoot.Mutation.Signup == nil {
 			break
@@ -583,6 +775,19 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.ComplexityRoot.ProductVariant.Title(childComplexity), true
 
+	case "Query.emailCampaigns":
+		if e.ComplexityRoot.Query.EmailCampaigns == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Query.EmailCampaigns(childComplexity), true
+	case "Query.emailTemplates":
+		if e.ComplexityRoot.Query.EmailTemplates == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Query.EmailTemplates(childComplexity), true
+
 	case "Query.me":
 		if e.ComplexityRoot.Query.Me == nil {
 			break
@@ -738,6 +943,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 	opCtx := graphql.GetOperationContext(ctx)
 	ec := newExecutionContext(opCtx, e, make(chan graphql.DeferredResult))
 	inputUnmarshalMap := graphql.BuildUnmarshalerMap(
+		ec.unmarshalInputCreateCampaignInput,
 		ec.unmarshalInputCreateProductInput,
 		ec.unmarshalInputUpdateProductInput,
 	)
@@ -846,6 +1052,62 @@ func (ec *executionContext) childFields_AuthPayload(ctx context.Context, field g
 		return ec.fieldContext_AuthPayload_user(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type AuthPayload", field.Name)
+}
+
+func (ec *executionContext) childFields_EmailCampaign(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "id":
+		return ec.fieldContext_EmailCampaign_id(ctx, field)
+	case "name":
+		return ec.fieldContext_EmailCampaign_name(ctx, field)
+	case "subject":
+		return ec.fieldContext_EmailCampaign_subject(ctx, field)
+	case "templateId":
+		return ec.fieldContext_EmailCampaign_templateId(ctx, field)
+	case "status":
+		return ec.fieldContext_EmailCampaign_status(ctx, field)
+	case "recipientType":
+		return ec.fieldContext_EmailCampaign_recipientType(ctx, field)
+	case "recipientCount":
+		return ec.fieldContext_EmailCampaign_recipientCount(ctx, field)
+	case "sentCount":
+		return ec.fieldContext_EmailCampaign_sentCount(ctx, field)
+	case "deliveredCount":
+		return ec.fieldContext_EmailCampaign_deliveredCount(ctx, field)
+	case "openedCount":
+		return ec.fieldContext_EmailCampaign_openedCount(ctx, field)
+	case "clickedCount":
+		return ec.fieldContext_EmailCampaign_clickedCount(ctx, field)
+	case "scheduledAt":
+		return ec.fieldContext_EmailCampaign_scheduledAt(ctx, field)
+	case "startedAt":
+		return ec.fieldContext_EmailCampaign_startedAt(ctx, field)
+	case "completedAt":
+		return ec.fieldContext_EmailCampaign_completedAt(ctx, field)
+	case "createdAt":
+		return ec.fieldContext_EmailCampaign_createdAt(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type EmailCampaign", field.Name)
+}
+
+func (ec *executionContext) childFields_EmailTemplate(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "id":
+		return ec.fieldContext_EmailTemplate_id(ctx, field)
+	case "name":
+		return ec.fieldContext_EmailTemplate_name(ctx, field)
+	case "slug":
+		return ec.fieldContext_EmailTemplate_slug(ctx, field)
+	case "description":
+		return ec.fieldContext_EmailTemplate_description(ctx, field)
+	case "subject":
+		return ec.fieldContext_EmailTemplate_subject(ctx, field)
+	case "isSystem":
+		return ec.fieldContext_EmailTemplate_isSystem(ctx, field)
+	case "createdAt":
+		return ec.fieldContext_EmailTemplate_createdAt(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type EmailTemplate", field.Name)
 }
 
 func (ec *executionContext) childFields_Order(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
@@ -1154,6 +1416,20 @@ func (ec *executionContext) field_Mutation_addProductImage_args(ctx context.Cont
 	return args, nil
 }
 
+func (ec *executionContext) field_Mutation_createCampaign_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "input",
+		func(ctx context.Context, v any) (model.CreateCampaignInput, error) {
+			return ec.unmarshalNCreateCampaignInput2githubᚗcomᚋhellohirushaᚋcreatorᚑosᚋgraphᚋmodelᚐCreateCampaignInput(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["input"] = arg0
+	return args, nil
+}
+
 func (ec *executionContext) field_Mutation_createProduct_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -1215,6 +1491,28 @@ func (ec *executionContext) field_Mutation_publishProduct_args(ctx context.Conte
 		return nil, err
 	}
 	args["id"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_scheduleCampaign_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "id",
+		func(ctx context.Context, v any) (uuid.UUID, error) {
+			return ec.unmarshalNUUID2githubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["id"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "sendAt",
+		func(ctx context.Context, v any) (*time.Time, error) {
+			return ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["sendAt"] = arg1
 	return args, nil
 }
 
@@ -1579,6 +1877,512 @@ func (ec *executionContext) fieldContext_AuthPayload_user(_ context.Context, fie
 	return fc, nil
 }
 
+func (ec *executionContext) _EmailCampaign_id(ctx context.Context, field graphql.CollectedField, obj *model.EmailCampaign) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_EmailCampaign_id(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.ID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v uuid.UUID) graphql.Marshaler {
+			return ec.marshalNUUID2githubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_EmailCampaign_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("EmailCampaign", field, false, false, errors.New("field of type UUID does not have child fields"))
+}
+
+func (ec *executionContext) _EmailCampaign_name(ctx context.Context, field graphql.CollectedField, obj *model.EmailCampaign) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_EmailCampaign_name(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Name, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_EmailCampaign_name(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("EmailCampaign", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _EmailCampaign_subject(ctx context.Context, field graphql.CollectedField, obj *model.EmailCampaign) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_EmailCampaign_subject(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Subject, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_EmailCampaign_subject(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("EmailCampaign", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _EmailCampaign_templateId(ctx context.Context, field graphql.CollectedField, obj *model.EmailCampaign) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_EmailCampaign_templateId(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.TemplateID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *uuid.UUID) graphql.Marshaler {
+			return ec.marshalOUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_EmailCampaign_templateId(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("EmailCampaign", field, false, false, errors.New("field of type UUID does not have child fields"))
+}
+
+func (ec *executionContext) _EmailCampaign_status(ctx context.Context, field graphql.CollectedField, obj *model.EmailCampaign) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_EmailCampaign_status(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Status, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_EmailCampaign_status(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("EmailCampaign", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _EmailCampaign_recipientType(ctx context.Context, field graphql.CollectedField, obj *model.EmailCampaign) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_EmailCampaign_recipientType(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.RecipientType, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_EmailCampaign_recipientType(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("EmailCampaign", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _EmailCampaign_recipientCount(ctx context.Context, field graphql.CollectedField, obj *model.EmailCampaign) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_EmailCampaign_recipientCount(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.RecipientCount, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int32) graphql.Marshaler {
+			return ec.marshalNInt2int32(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_EmailCampaign_recipientCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("EmailCampaign", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _EmailCampaign_sentCount(ctx context.Context, field graphql.CollectedField, obj *model.EmailCampaign) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_EmailCampaign_sentCount(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.SentCount, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int32) graphql.Marshaler {
+			return ec.marshalNInt2int32(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_EmailCampaign_sentCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("EmailCampaign", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _EmailCampaign_deliveredCount(ctx context.Context, field graphql.CollectedField, obj *model.EmailCampaign) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_EmailCampaign_deliveredCount(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.DeliveredCount, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int32) graphql.Marshaler {
+			return ec.marshalNInt2int32(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_EmailCampaign_deliveredCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("EmailCampaign", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _EmailCampaign_openedCount(ctx context.Context, field graphql.CollectedField, obj *model.EmailCampaign) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_EmailCampaign_openedCount(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.OpenedCount, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int32) graphql.Marshaler {
+			return ec.marshalNInt2int32(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_EmailCampaign_openedCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("EmailCampaign", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _EmailCampaign_clickedCount(ctx context.Context, field graphql.CollectedField, obj *model.EmailCampaign) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_EmailCampaign_clickedCount(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.ClickedCount, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int32) graphql.Marshaler {
+			return ec.marshalNInt2int32(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_EmailCampaign_clickedCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("EmailCampaign", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _EmailCampaign_scheduledAt(ctx context.Context, field graphql.CollectedField, obj *model.EmailCampaign) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_EmailCampaign_scheduledAt(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.ScheduledAt, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *time.Time) graphql.Marshaler {
+			return ec.marshalOTime2ᚖtimeᚐTime(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_EmailCampaign_scheduledAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("EmailCampaign", field, false, false, errors.New("field of type Time does not have child fields"))
+}
+
+func (ec *executionContext) _EmailCampaign_startedAt(ctx context.Context, field graphql.CollectedField, obj *model.EmailCampaign) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_EmailCampaign_startedAt(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.StartedAt, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *time.Time) graphql.Marshaler {
+			return ec.marshalOTime2ᚖtimeᚐTime(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_EmailCampaign_startedAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("EmailCampaign", field, false, false, errors.New("field of type Time does not have child fields"))
+}
+
+func (ec *executionContext) _EmailCampaign_completedAt(ctx context.Context, field graphql.CollectedField, obj *model.EmailCampaign) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_EmailCampaign_completedAt(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.CompletedAt, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *time.Time) graphql.Marshaler {
+			return ec.marshalOTime2ᚖtimeᚐTime(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_EmailCampaign_completedAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("EmailCampaign", field, false, false, errors.New("field of type Time does not have child fields"))
+}
+
+func (ec *executionContext) _EmailCampaign_createdAt(ctx context.Context, field graphql.CollectedField, obj *model.EmailCampaign) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_EmailCampaign_createdAt(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.CreatedAt, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v time.Time) graphql.Marshaler {
+			return ec.marshalNTime2timeᚐTime(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_EmailCampaign_createdAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("EmailCampaign", field, false, false, errors.New("field of type Time does not have child fields"))
+}
+
+func (ec *executionContext) _EmailTemplate_id(ctx context.Context, field graphql.CollectedField, obj *model.EmailTemplate) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_EmailTemplate_id(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.ID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v uuid.UUID) graphql.Marshaler {
+			return ec.marshalNUUID2githubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_EmailTemplate_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("EmailTemplate", field, false, false, errors.New("field of type UUID does not have child fields"))
+}
+
+func (ec *executionContext) _EmailTemplate_name(ctx context.Context, field graphql.CollectedField, obj *model.EmailTemplate) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_EmailTemplate_name(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Name, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_EmailTemplate_name(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("EmailTemplate", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _EmailTemplate_slug(ctx context.Context, field graphql.CollectedField, obj *model.EmailTemplate) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_EmailTemplate_slug(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Slug, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_EmailTemplate_slug(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("EmailTemplate", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _EmailTemplate_description(ctx context.Context, field graphql.CollectedField, obj *model.EmailTemplate) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_EmailTemplate_description(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Description, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *string) graphql.Marshaler {
+			return ec.marshalOString2ᚖstring(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_EmailTemplate_description(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("EmailTemplate", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _EmailTemplate_subject(ctx context.Context, field graphql.CollectedField, obj *model.EmailTemplate) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_EmailTemplate_subject(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Subject, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_EmailTemplate_subject(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("EmailTemplate", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _EmailTemplate_isSystem(ctx context.Context, field graphql.CollectedField, obj *model.EmailTemplate) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_EmailTemplate_isSystem(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.IsSystem, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v bool) graphql.Marshaler {
+			return ec.marshalNBoolean2bool(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_EmailTemplate_isSystem(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("EmailTemplate", field, false, false, errors.New("field of type Boolean does not have child fields"))
+}
+
+func (ec *executionContext) _EmailTemplate_createdAt(ctx context.Context, field graphql.CollectedField, obj *model.EmailTemplate) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_EmailTemplate_createdAt(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.CreatedAt, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v time.Time) graphql.Marshaler {
+			return ec.marshalNTime2timeᚐTime(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_EmailTemplate_createdAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("EmailTemplate", field, false, false, errors.New("field of type Time does not have child fields"))
+}
+
 func (ec *executionContext) _Mutation_login(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -1925,6 +2729,94 @@ func (ec *executionContext) fieldContext_Mutation_addProductImage(ctx context.Co
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_addProductImage_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_createCampaign(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_createCampaign(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Mutation().CreateCampaign(ctx, fc.Args["input"].(model.CreateCampaignInput))
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.EmailCampaign) graphql.Marshaler {
+			return ec.marshalNEmailCampaign2ᚖgithubᚗcomᚋhellohirushaᚋcreatorᚑosᚋgraphᚋmodelᚐEmailCampaign(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_createCampaign(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_EmailCampaign(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_createCampaign_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_scheduleCampaign(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_scheduleCampaign(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Mutation().ScheduleCampaign(ctx, fc.Args["id"].(uuid.UUID), fc.Args["sendAt"].(*time.Time))
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.EmailCampaign) graphql.Marshaler {
+			return ec.marshalNEmailCampaign2ᚖgithubᚗcomᚋhellohirushaᚋcreatorᚑosᚋgraphᚋmodelᚐEmailCampaign(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_scheduleCampaign(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_EmailCampaign(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_scheduleCampaign_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -3331,6 +4223,70 @@ func (ec *executionContext) fieldContext_Query_order(ctx context.Context, field 
 	if fc.Args, err = ec.field_Query_order_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_emailTemplates(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Query_emailTemplates(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.Query().EmailTemplates(ctx)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []*model.EmailTemplate) graphql.Marshaler {
+			return ec.marshalNEmailTemplate2ᚕᚖgithubᚗcomᚋhellohirushaᚋcreatorᚑosᚋgraphᚋmodelᚐEmailTemplateᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Query_emailTemplates(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_EmailTemplate(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_emailCampaigns(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Query_emailCampaigns(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.Query().EmailCampaigns(ctx)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []*model.EmailCampaign) graphql.Marshaler {
+			return ec.marshalNEmailCampaign2ᚕᚖgithubᚗcomᚋhellohirushaᚋcreatorᚑosᚋgraphᚋmodelᚐEmailCampaignᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Query_emailCampaigns(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_EmailCampaign(ctx, field)
+		},
 	}
 	return fc, nil
 }
@@ -4746,6 +5702,50 @@ func (ec *executionContext) fieldContext___Type_isOneOf(_ context.Context, field
 
 // region    **************************** input.gotpl *****************************
 
+func (ec *executionContext) unmarshalInputCreateCampaignInput(ctx context.Context, obj any) (model.CreateCampaignInput, error) {
+	var it model.CreateCampaignInput
+	if obj == nil {
+		return it, nil
+	}
+
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"name", "subject", "templateId"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "name":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Name = data
+		case "subject":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("subject"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Subject = data
+		case "templateId":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("templateId"))
+			data, err := ec.unmarshalNUUID2githubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.TemplateID = data
+		}
+	}
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputCreateProductInput(ctx context.Context, obj any) (model.CreateProductInput, error) {
 	var it model.CreateProductInput
 	if obj == nil {
@@ -4938,6 +5938,169 @@ func (ec *executionContext) _AuthPayload(ctx context.Context, sel ast.SelectionS
 	return out
 }
 
+var emailCampaignImplementors = []string{"EmailCampaign"}
+
+func (ec *executionContext) _EmailCampaign(ctx context.Context, sel ast.SelectionSet, obj *model.EmailCampaign) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, emailCampaignImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("EmailCampaign")
+		case "id":
+			out.Values[i] = ec._EmailCampaign_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "name":
+			out.Values[i] = ec._EmailCampaign_name(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "subject":
+			out.Values[i] = ec._EmailCampaign_subject(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "templateId":
+			out.Values[i] = ec._EmailCampaign_templateId(ctx, field, obj)
+		case "status":
+			out.Values[i] = ec._EmailCampaign_status(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "recipientType":
+			out.Values[i] = ec._EmailCampaign_recipientType(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "recipientCount":
+			out.Values[i] = ec._EmailCampaign_recipientCount(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "sentCount":
+			out.Values[i] = ec._EmailCampaign_sentCount(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "deliveredCount":
+			out.Values[i] = ec._EmailCampaign_deliveredCount(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "openedCount":
+			out.Values[i] = ec._EmailCampaign_openedCount(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "clickedCount":
+			out.Values[i] = ec._EmailCampaign_clickedCount(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "scheduledAt":
+			out.Values[i] = ec._EmailCampaign_scheduledAt(ctx, field, obj)
+		case "startedAt":
+			out.Values[i] = ec._EmailCampaign_startedAt(ctx, field, obj)
+		case "completedAt":
+			out.Values[i] = ec._EmailCampaign_completedAt(ctx, field, obj)
+		case "createdAt":
+			out.Values[i] = ec._EmailCampaign_createdAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var emailTemplateImplementors = []string{"EmailTemplate"}
+
+func (ec *executionContext) _EmailTemplate(ctx context.Context, sel ast.SelectionSet, obj *model.EmailTemplate) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, emailTemplateImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("EmailTemplate")
+		case "id":
+			out.Values[i] = ec._EmailTemplate_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "name":
+			out.Values[i] = ec._EmailTemplate_name(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "slug":
+			out.Values[i] = ec._EmailTemplate_slug(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "description":
+			out.Values[i] = ec._EmailTemplate_description(ctx, field, obj)
+		case "subject":
+			out.Values[i] = ec._EmailTemplate_subject(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "isSystem":
+			out.Values[i] = ec._EmailTemplate_isSystem(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "createdAt":
+			out.Values[i] = ec._EmailTemplate_createdAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var mutationImplementors = []string{"Mutation"}
 
 func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet) graphql.Marshaler {
@@ -5009,6 +6172,20 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		case "addProductImage":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_addProductImage(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "createCampaign":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_createCampaign(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "scheduleCampaign":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_scheduleCampaign(ctx, field)
 			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
@@ -5563,6 +6740,50 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "emailTemplates":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_emailTemplates(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "emailCampaigns":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_emailCampaigns(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
 		case "__type":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Query___type(ctx, field)
@@ -6081,9 +7302,70 @@ func (ec *executionContext) marshalNBoolean2bool(ctx context.Context, sel ast.Se
 	return res
 }
 
+func (ec *executionContext) unmarshalNCreateCampaignInput2githubᚗcomᚋhellohirushaᚋcreatorᚑosᚋgraphᚋmodelᚐCreateCampaignInput(ctx context.Context, v any) (model.CreateCampaignInput, error) {
+	res, err := ec.unmarshalInputCreateCampaignInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
 func (ec *executionContext) unmarshalNCreateProductInput2githubᚗcomᚋhellohirushaᚋcreatorᚑosᚋgraphᚋmodelᚐCreateProductInput(ctx context.Context, v any) (model.CreateProductInput, error) {
 	res, err := ec.unmarshalInputCreateProductInput(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNEmailCampaign2githubᚗcomᚋhellohirushaᚋcreatorᚑosᚋgraphᚋmodelᚐEmailCampaign(ctx context.Context, sel ast.SelectionSet, v model.EmailCampaign) graphql.Marshaler {
+	return ec._EmailCampaign(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNEmailCampaign2ᚕᚖgithubᚗcomᚋhellohirushaᚋcreatorᚑosᚋgraphᚋmodelᚐEmailCampaignᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.EmailCampaign) graphql.Marshaler {
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNEmailCampaign2ᚖgithubᚗcomᚋhellohirushaᚋcreatorᚑosᚋgraphᚋmodelᚐEmailCampaign(ctx, sel, v[i])
+	})
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNEmailCampaign2ᚖgithubᚗcomᚋhellohirushaᚋcreatorᚑosᚋgraphᚋmodelᚐEmailCampaign(ctx context.Context, sel ast.SelectionSet, v *model.EmailCampaign) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._EmailCampaign(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNEmailTemplate2ᚕᚖgithubᚗcomᚋhellohirushaᚋcreatorᚑosᚋgraphᚋmodelᚐEmailTemplateᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.EmailTemplate) graphql.Marshaler {
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNEmailTemplate2ᚖgithubᚗcomᚋhellohirushaᚋcreatorᚑosᚋgraphᚋmodelᚐEmailTemplate(ctx, sel, v[i])
+	})
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNEmailTemplate2ᚖgithubᚗcomᚋhellohirushaᚋcreatorᚑosᚋgraphᚋmodelᚐEmailTemplate(ctx context.Context, sel ast.SelectionSet, v *model.EmailTemplate) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._EmailTemplate(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalNFloat2float64(ctx context.Context, v any) (float64, error) {

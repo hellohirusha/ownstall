@@ -11,9 +11,9 @@ import (
 
 	"github.com/joho/godotenv"
 
-	"github.com/hellohirusha/creator-os/pkg/database"
-	"github.com/hellohirusha/creator-os/pkg/email"
-	"github.com/hellohirusha/creator-os/pkg/queue"
+	"github.com/hellohirusha/ownstall/pkg/database"
+	"github.com/hellohirusha/ownstall/pkg/email"
+	"github.com/hellohirusha/ownstall/pkg/queue"
 )
 
 func main() {

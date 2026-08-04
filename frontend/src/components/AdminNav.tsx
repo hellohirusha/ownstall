@@ -1,5 +1,5 @@
 import { Link, NavLink } from "react-router-dom";
-import { Package, ReceiptText } from "lucide-react";
+import { Mail, Package, ReceiptText } from "lucide-react";
 
 const linkClass = ({ isActive }: { isActive: boolean }) =>
   `flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
@@ -13,7 +13,7 @@ export function AdminNav() {
     <header className="sticky top-0 z-10 bg-white border-b border-gray-100">
       <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
         <Link to="/" className="text-lg font-bold text-gray-900">
-          CreatorOS
+          Ownstall
         </Link>
         <nav className="flex items-center gap-1">
           <NavLink to="/admin/products" className={linkClass}>
@@ -23,6 +23,10 @@ export function AdminNav() {
           <NavLink to="/admin/orders" className={linkClass}>
             <ReceiptText size={16} />
             Orders
+          </NavLink>
+          <NavLink to="/admin/notify" className={linkClass}>
+            <Mail size={16} />
+            Notify
           </NavLink>
         </nav>
       </div>

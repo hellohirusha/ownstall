@@ -15,12 +15,46 @@ type AuthPayload struct {
 	User         *User  `json:"user"`
 }
 
+type CreateCampaignInput struct {
+	Name       string    `json:"name"`
+	Subject    string    `json:"subject"`
+	TemplateID uuid.UUID `json:"templateId"`
+}
+
 type CreateProductInput struct {
 	Name         string   `json:"name"`
 	Description  *string  `json:"description,omitempty"`
 	BasePrice    float64  `json:"basePrice"`
 	ComparePrice *float64 `json:"comparePrice,omitempty"`
 	Tags         []string `json:"tags,omitempty"`
+}
+
+type EmailCampaign struct {
+	ID             uuid.UUID  `json:"id"`
+	Name           string     `json:"name"`
+	Subject        string     `json:"subject"`
+	TemplateID     *uuid.UUID `json:"templateId,omitempty"`
+	Status         string     `json:"status"`
+	RecipientType  string     `json:"recipientType"`
+	RecipientCount int32      `json:"recipientCount"`
+	SentCount      int32      `json:"sentCount"`
+	DeliveredCount int32      `json:"deliveredCount"`
+	OpenedCount    int32      `json:"openedCount"`
+	ClickedCount   int32      `json:"clickedCount"`
+	ScheduledAt    *time.Time `json:"scheduledAt,omitempty"`
+	StartedAt      *time.Time `json:"startedAt,omitempty"`
+	CompletedAt    *time.Time `json:"completedAt,omitempty"`
+	CreatedAt      time.Time  `json:"createdAt"`
+}
+
+type EmailTemplate struct {
+	ID          uuid.UUID `json:"id"`
+	Name        string    `json:"name"`
+	Slug        string    `json:"slug"`
+	Description *string   `json:"description,omitempty"`
+	Subject     string    `json:"subject"`
+	IsSystem    bool      `json:"isSystem"`
+	CreatedAt   time.Time `json:"createdAt"`
 }
 
 type Mutation struct {

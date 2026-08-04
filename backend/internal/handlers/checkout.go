@@ -13,8 +13,8 @@ import (
 	"github.com/stripe/stripe-go/v76/checkout/session"
 	"github.com/stripe/stripe-go/v76/webhook"
 
-	appMiddleware "github.com/hellohirusha/creator-os/internal/middleware"
-	"github.com/hellohirusha/creator-os/internal/services"
+	appMiddleware "github.com/hellohirusha/ownstall/internal/middleware"
+	"github.com/hellohirusha/ownstall/internal/services"
 )
 
 type CheckoutHandler struct {

@@ -65,7 +65,7 @@ export function Signup() {
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">CreatorOS</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Ownstall</h1>
           <p className="text-gray-500 mt-2">Launch your store in minutes</p>
         </div>
 
@@ -100,7 +100,7 @@ export function Signup() {
               <p className="mt-1 text-xs text-gray-400">
                 Your store:{" "}
                 <span className="font-medium">
-                  {form.subdomain || "yourstore"}.creatorOS.app
+                  {form.subdomain || "yourstore"}.ownstall.app
                 </span>
               </p>
             </div>

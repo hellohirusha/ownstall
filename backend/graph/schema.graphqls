@@ -46,6 +46,10 @@ type Query {
 
   orders(status: String): [Order!]!
   order(id: UUID!): Order
+
+  # Notify — auth required
+  emailTemplates: [EmailTemplate!]!
+  emailCampaigns: [EmailCampaign!]!
 }
 
 # ─── MUTATIONS ───────────────────────────────────────────────
@@ -72,6 +76,11 @@ type Mutation {
     url: String!
     altText: String
   ): ProductImage!
+
+  # Notify — auth required
+  createCampaign(input: CreateCampaignInput!): EmailCampaign!
+  # sendAt omitted = send on the scheduler's next tick
+  scheduleCampaign(id: UUID!, sendAt: Time): EmailCampaign!
 }
 
 # ─── PRODUCT TYPES ───────────────────────────────────────────
@@ -133,6 +142,42 @@ input UpdateProductInput {
   status: String
   isFeatured: Boolean
   tags: [String!]
+}
+
+# ─── NOTIFY TYPES ────────────────────────────────────────────
+
+type EmailTemplate {
+  id: UUID!
+  name: String!
+  slug: String!
+  description: String
+  subject: String!
+  isSystem: Boolean!
+  createdAt: Time!
+}
+
+type EmailCampaign {
+  id: UUID!
+  name: String!
+  subject: String!
+  templateId: UUID
+  status: String!
+  recipientType: String!
+  recipientCount: Int!
+  sentCount: Int!
+  deliveredCount: Int!
+  openedCount: Int!
+  clickedCount: Int!
+  scheduledAt: Time
+  startedAt: Time
+  completedAt: Time
+  createdAt: Time!
+}
+
+input CreateCampaignInput {
+  name: String!
+  subject: String!
+  templateId: UUID!
 }
 
 type Order {

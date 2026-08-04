@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/hellohirusha/creator-os/internal/auth"
+	"github.com/hellohirusha/ownstall/internal/auth"
 )
 
 type contextKey string
