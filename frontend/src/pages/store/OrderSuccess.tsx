@@ -39,7 +39,7 @@ export function OrderSuccessPage() {
         </Link>
         <p className="mt-6">
           <Link to="/" className="text-sm text-gray-400 hover:text-gray-600">
-            CreatorOS home
+            Ownstall home
           </Link>
         </p>
       </div>

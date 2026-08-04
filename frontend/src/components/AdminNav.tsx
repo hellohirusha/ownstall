@@ -13,7 +13,7 @@ export function AdminNav() {
     <header className="sticky top-0 z-10 bg-white border-b border-gray-100">
       <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
         <Link to="/" className="text-lg font-bold text-gray-900">
-          CreatorOS
+          Ownstall
         </Link>
         <nav className="flex items-center gap-1">
           <NavLink to="/admin/products" className={linkClass}>

@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 
 const DEMO_STORE_PATH = "/store?store=hirusha";
-const REPO_URL = "https://github.com/hellohirusha/creator-os";
+const REPO_URL = "https://github.com/hellohirusha/ownstall";
 
 const FEATURES = [
   {
@@ -68,7 +68,7 @@ export function LandingPage() {
       {/* Header */}
       <header className="sticky top-0 z-10 bg-white/90 backdrop-blur border-b border-gray-100">
         <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-          <span className="text-xl font-bold text-gray-900">CreatorOS</span>
+          <span className="text-xl font-bold text-gray-900">Ownstall</span>
           <nav className="flex items-center gap-3">
             <a
               href={REPO_URL}
@@ -110,7 +110,7 @@ export function LandingPage() {
             Launch a store in minutes.
           </h1>
           <p className="text-lg text-gray-500 max-w-2xl mx-auto mb-8">
-            CreatorOS is a multi-tenant e-commerce platform built end-to-end
+            Ownstall is a multi-tenant e-commerce platform built end-to-end
             with Go, React, PostgreSQL, Redis and Stripe. From signup to
             storefront to the order-confirmation email in your inbox.
           </p>
