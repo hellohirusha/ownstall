@@ -17,13 +17,13 @@ import (
 	"github.com/go-chi/cors"
 	"github.com/joho/godotenv"
 
-	"github.com/hellohirusha/creator-os/graph"
-	"github.com/hellohirusha/creator-os/internal/handlers"
-	appMiddleware "github.com/hellohirusha/creator-os/internal/middleware"
-	"github.com/hellohirusha/creator-os/internal/services"
-	"github.com/hellohirusha/creator-os/pkg/database"
-	"github.com/hellohirusha/creator-os/pkg/queue"
-	"github.com/hellohirusha/creator-os/pkg/storage"
+	"github.com/hellohirusha/ownstall/graph"
+	"github.com/hellohirusha/ownstall/internal/handlers"
+	appMiddleware "github.com/hellohirusha/ownstall/internal/middleware"
+	"github.com/hellohirusha/ownstall/internal/services"
+	"github.com/hellohirusha/ownstall/pkg/database"
+	"github.com/hellohirusha/ownstall/pkg/queue"
+	"github.com/hellohirusha/ownstall/pkg/storage"
 )
 
 func main() {
@@ -94,7 +94,7 @@ func main() {
 			r.Post("/upload/product-image", uploadHandler.UploadProductImage)
 		})
 		r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-			_, _ = w.Write([]byte(`{"message":"CreatorOS API"}`))
+			_, _ = w.Write([]byte(`{"message":"Ownstall API"}`))
 		})
 	})
 

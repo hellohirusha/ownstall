@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/hellohirusha/creator-os/graph/model"
+	"github.com/hellohirusha/ownstall/graph/model"
 )
 
 // campaignColumns is the shared SELECT list for email campaigns.

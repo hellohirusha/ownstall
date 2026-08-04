@@ -3,7 +3,7 @@ package graph
 import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/hellohirusha/creator-os/internal/services"
+	"github.com/hellohirusha/ownstall/internal/services"
 )
 
 // This file will not be regenerated automatically.

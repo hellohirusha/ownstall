@@ -6,7 +6,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/hellohirusha/creator-os/pkg/queue"
+	"github.com/hellohirusha/ownstall/pkg/queue"
 )
 
 // CampaignService dispatches scheduled email campaigns.

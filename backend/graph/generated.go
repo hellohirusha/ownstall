@@ -16,7 +16,7 @@ import (
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/99designs/gqlgen/graphql/introspection"
 	"github.com/google/uuid"
-	"github.com/hellohirusha/creator-os/graph/model"
+	"github.com/hellohirusha/ownstall/graph/model"
 	gqlparser "github.com/vektah/gqlparser/v2"
 	"github.com/vektah/gqlparser/v2/ast"
 )

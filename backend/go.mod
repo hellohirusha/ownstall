@@ -1,4 +1,4 @@
-module github.com/hellohirusha/creator-os
+module github.com/hellohirusha/ownstall
 
 go 1.25.0
 

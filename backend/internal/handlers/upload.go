@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"net/http"
 
-	appMiddleware "github.com/hellohirusha/creator-os/internal/middleware"
-	"github.com/hellohirusha/creator-os/pkg/storage"
+	appMiddleware "github.com/hellohirusha/ownstall/internal/middleware"
+	"github.com/hellohirusha/ownstall/pkg/storage"
 )
 
 type UploadHandler struct {
@@ -37,7 +37,7 @@ func (h *UploadHandler) UploadProductImage(w http.ResponseWriter, r *http.Reques
 	defer func() { _ = file.Close() }()
 
 	// Upload to Cloudinary in the tenant's folder
-	folder := fmt.Sprintf("creator-os/products/%s", tenantID)
+	folder := fmt.Sprintf("ownstall/products/%s", tenantID)
 	result, err := h.Storage.UploadImage(r.Context(), file, folder)
 	if err != nil {
 		http.Error(w, `{"error":"upload failed"}`, http.StatusInternalServerError)
@@ -56,7 +56,7 @@ func (h *UploadHandler) UploadProductImage(w http.ResponseWriter, r *http.Reques
 // GET /api/upload/presigned?folder=products
 func (h *UploadHandler) GetPresignedURL(w http.ResponseWriter, r *http.Request) {
 	tenantID := appMiddleware.GetTenantID(r.Context())
-	folder := fmt.Sprintf("creator-os/products/%s", tenantID)
+	folder := fmt.Sprintf("ownstall/products/%s", tenantID)
 
 	params := h.Storage.GeneratePresignedURL(folder)
 

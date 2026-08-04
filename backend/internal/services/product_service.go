@@ -7,7 +7,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/hellohirusha/creator-os/internal/models"
+	"github.com/hellohirusha/ownstall/internal/models"
 )
 
 type ProductService struct {

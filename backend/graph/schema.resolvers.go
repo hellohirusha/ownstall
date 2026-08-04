@@ -12,9 +12,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/hellohirusha/creator-os/graph/model"
-	appMiddleware "github.com/hellohirusha/creator-os/internal/middleware"
-	"github.com/hellohirusha/creator-os/internal/services"
+	"github.com/hellohirusha/ownstall/graph/model"
+	appMiddleware "github.com/hellohirusha/ownstall/internal/middleware"
+	"github.com/hellohirusha/ownstall/internal/services"
 	pgx "github.com/jackc/pgx/v5"
 )
 

@@ -7,7 +7,7 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- ─────────────────────────────────────────────────────────────
 -- TENANTS
--- Each tenant is one store owner / business using CreatorOS.
+-- Each tenant is one store owner / business using Ownstall.
 -- Every piece of data links back to a tenant.
 -- ─────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS tenants (

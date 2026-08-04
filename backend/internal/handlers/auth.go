@@ -11,8 +11,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"golang.org/x/crypto/bcrypt"
 
-	"github.com/hellohirusha/creator-os/internal/auth"
-	"github.com/hellohirusha/creator-os/internal/services"
+	"github.com/hellohirusha/ownstall/internal/auth"
+	"github.com/hellohirusha/ownstall/internal/services"
 )
 
 type AuthHandler struct {
