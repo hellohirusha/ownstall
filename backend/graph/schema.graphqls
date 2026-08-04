@@ -50,6 +50,12 @@ type Query {
   # Notify — auth required
   emailTemplates: [EmailTemplate!]!
   emailCampaigns: [EmailCampaign!]!
+
+  # Reply — auth required
+  tickets(status: String, priority: String, search: String): [Ticket!]!
+  ticket(id: UUID!): Ticket
+  cannedResponses: [CannedResponse!]!
+  supportMetrics: SupportMetrics!
 }
 
 # ─── MUTATIONS ───────────────────────────────────────────────
@@ -81,6 +87,11 @@ type Mutation {
   createCampaign(input: CreateCampaignInput!): EmailCampaign!
   # sendAt omitted = send on the scheduler's next tick
   scheduleCampaign(id: UUID!, sendAt: Time): EmailCampaign!
+
+  # Reply — auth required
+  createTicket(input: CreateTicketInput!): Ticket!
+  replyToTicket(ticketId: UUID!, body: String!, isInternal: Boolean!): TicketMessage!
+  updateTicketStatus(ticketId: UUID!, status: String!): Ticket!
 }
 
 # ─── PRODUCT TYPES ───────────────────────────────────────────
@@ -178,6 +189,93 @@ input CreateCampaignInput {
   name: String!
   subject: String!
   templateId: UUID!
+}
+
+# ─── REPLY TYPES ─────────────────────────────────────────────
+
+type Ticket {
+  id: UUID!
+  number: Int!
+  subject: String!
+  status: String!
+  priority: String!
+  customerEmail: String!
+  customerName: String
+  assigneeId: UUID
+  # Empty string when unassigned
+  assigneeName: String!
+  source: String!
+  # 'ok' | 'at_risk' | 'breached' | 'met' | 'none'
+  slaStatus: String!
+  slaFirstResponseAt: Time
+  firstResponseAt: Time
+  resolvedAt: Time
+  # AI draft fields populated on Day 8
+  aiDraftBody: String
+  aiDraftConfidence: Float
+  # Preview of the newest non-internal message (inbox list)
+  latestMessage: String!
+  # Customer messages since the last staff reply
+  unreadCount: Int!
+  messages: [TicketMessage!]!
+  createdAt: Time!
+  updatedAt: Time!
+}
+
+type TicketMessage {
+  id: UUID!
+  # 'customer' | 'staff' | 'system' | 'ai'
+  authorType: String!
+  authorName: String
+  authorEmail: String
+  body: String!
+  isInternal: Boolean!
+  createdAt: Time!
+}
+
+type CannedResponse {
+  id: UUID!
+  name: String!
+  shortcut: String
+  body: String!
+}
+
+type SupportMetrics {
+  openTickets: Int!
+  # Averages over tickets that have a first response / resolution
+  avgFirstResponseHours: Float!
+  avgResolutionHours: Float!
+  # Fraction (0-1) of SLA-tracked tickets responded to late (or overdue now)
+  slaBreachRate: Float!
+  # Last 7 days, oldest first
+  ticketsByDay: [TicketsByDay!]!
+  ticketsByStatus: [TicketsByStatus!]!
+  ticketsByPriority: [TicketsByPriority!]!
+}
+
+type TicketsByDay {
+  date: String!
+  count: Int!
+}
+
+type TicketsByStatus {
+  status: String!
+  count: Int!
+}
+
+type TicketsByPriority {
+  priority: String!
+  count: Int!
+}
+
+input CreateTicketInput {
+  subject: String!
+  body: String!
+  customerEmail: String!
+  customerName: String
+  source: String
+  priority: String
+  orderId: UUID
 }
 
 type Order {

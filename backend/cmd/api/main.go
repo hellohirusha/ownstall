@@ -83,6 +83,18 @@ func main() {
 		}
 	}()
 
+	// SLA checker — alerts on tickets nearing/past first-response deadline
+	slaService := &services.SLAService{DB: db}
+	go func() {
+		ticker := time.NewTicker(5 * time.Minute)
+		defer ticker.Stop()
+		for range ticker.C {
+			if err := slaService.CheckSLABreaches(context.Background()); err != nil {
+				log.Printf("SLA check: %v", err)
+			}
+		}
+	}()
+
 	r.Route("/api", func(r chi.Router) {
 		r.Post("/signup", authHandler.Signup)
 		r.Post("/login", authHandler.Login)
@@ -106,11 +118,17 @@ func main() {
 	r.Get("/webhooks/email/open", trackingHandler.HandleOpen)
 	r.Post("/webhooks/resend", trackingHandler.HandleResendWebhook)
 
+	// Inbound support email - NO auth (Resend inbound routing posts here)
+	ticketService := &services.TicketService{DB: db}
+	inboundEmailHandler := &handlers.InboundEmailHandler{DB: db, TicketService: ticketService}
+	r.Post("/webhooks/email/inbound", inboundEmailHandler.HandleInboundEmail)
+
 	graphqlHandler := handler.NewDefaultServer(
 		graph.NewExecutableSchema(graph.Config{
 			Resolvers: &graph.Resolver{
 				DB:             db,
 				ProductService: &services.ProductService{DB: db},
+				TicketService:  ticketService,
 			},
 		}),
 	)

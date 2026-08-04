@@ -156,6 +156,92 @@ func (r *mutationResolver) ScheduleCampaign(ctx context.Context, id uuid.UUID, s
 	return r.fetchCampaign(ctx, tenantID, id.String())
 }
 
+// CreateTicket opens a support ticket for the authenticated tenant
+func (r *mutationResolver) CreateTicket(ctx context.Context, input model.CreateTicketInput) (*model.Ticket, error) {
+	tenantID := appMiddleware.GetTenantID(ctx)
+	if tenantID == "" {
+		return nil, fmt.Errorf("unauthorized")
+	}
+
+	in := services.CreateTicketInput{
+		TenantID:      tenantID,
+		Subject:       input.Subject,
+		Body:          input.Body,
+		CustomerEmail: input.CustomerEmail,
+		Source:        "web",
+	}
+	if input.CustomerName != nil {
+		in.CustomerName = *input.CustomerName
+	}
+	if input.Source != nil && *input.Source != "" {
+		in.Source = *input.Source
+	}
+	if input.Priority != nil {
+		in.Priority = *input.Priority
+	}
+	if input.OrderID != nil {
+		in.OrderID = input.OrderID.String()
+	}
+
+	ticket, err := r.TicketService.CreateTicket(ctx, in)
+	if err != nil {
+		return nil, err
+	}
+	return ticketToGraphQL(ticket), nil
+}
+
+// ReplyToTicket adds a staff reply or internal note to a tenant-owned ticket
+func (r *mutationResolver) ReplyToTicket(ctx context.Context, ticketID uuid.UUID, body string, isInternal bool) (*model.TicketMessage, error) {
+	tenantID := appMiddleware.GetTenantID(ctx)
+	userID := appMiddleware.GetUserID(ctx)
+	if tenantID == "" || userID == "" {
+		return nil, fmt.Errorf("unauthorized")
+	}
+
+	// The service writes by ticket id alone — verify ownership first
+	var owned bool
+	if err := r.DB.QueryRow(ctx,
+		"SELECT EXISTS(SELECT 1 FROM tickets WHERE id = $1 AND tenant_id = $2)",
+		ticketID.String(), tenantID,
+	).Scan(&owned); err != nil {
+		return nil, fmt.Errorf("failed to verify ticket: %w", err)
+	}
+	if !owned {
+		return nil, fmt.Errorf("ticket not found")
+	}
+
+	msg, err := r.TicketService.ReplyToTicket(ctx, services.ReplyInput{
+		TenantID:   tenantID,
+		TicketID:   ticketID.String(),
+		AuthorID:   userID,
+		Body:       body,
+		IsInternal: isInternal,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return ticketMessageToGraphQL(msg), nil
+}
+
+// UpdateTicketStatus changes a ticket's status and returns the updated ticket
+func (r *mutationResolver) UpdateTicketStatus(ctx context.Context, ticketID uuid.UUID, status string) (*model.Ticket, error) {
+	tenantID := appMiddleware.GetTenantID(ctx)
+	userID := appMiddleware.GetUserID(ctx)
+	if tenantID == "" || userID == "" {
+		return nil, fmt.Errorf("unauthorized")
+	}
+
+	if err := r.TicketService.UpdateTicketStatus(ctx, tenantID, ticketID.String(), userID, status); err != nil {
+		return nil, fmt.Errorf("failed to update ticket status: %w", err)
+	}
+
+	ticket, err := r.TicketService.GetTicketWithMessages(ctx, tenantID, ticketID.String())
+	if err != nil {
+		return nil, err
+	}
+	return ticketToGraphQL(ticket), nil
+}
+
 // Me is the resolver for the me field.
 func (r *queryResolver) Me(ctx context.Context) (*model.User, error) {
 	panic(fmt.Errorf("not implemented: Me - me"))
@@ -384,6 +470,185 @@ func (r *queryResolver) EmailCampaigns(ctx context.Context) ([]*model.EmailCampa
 		campaigns = append(campaigns, c)
 	}
 	return campaigns, nil
+}
+
+// Tickets lists the authenticated tenant's tickets for the inbox
+func (r *queryResolver) Tickets(ctx context.Context, status *string, priority *string, search *string) ([]*model.Ticket, error) {
+	tenantID := appMiddleware.GetTenantID(ctx)
+	if tenantID == "" {
+		return nil, fmt.Errorf("unauthorized")
+	}
+
+	opts := services.ListTicketsOptions{}
+	if status != nil {
+		opts.Status = *status
+	}
+	if priority != nil {
+		opts.Priority = *priority
+	}
+	if search != nil {
+		opts.Search = *search
+	}
+
+	tickets, err := r.TicketService.ListTickets(ctx, tenantID, opts)
+	if err != nil {
+		return nil, err
+	}
+
+	result := []*model.Ticket{}
+	for _, t := range tickets {
+		result = append(result, ticketToGraphQL(t))
+	}
+	return result, nil
+}
+
+// Ticket fetches a single tenant-owned ticket with its full message thread
+func (r *queryResolver) Ticket(ctx context.Context, id uuid.UUID) (*model.Ticket, error) {
+	tenantID := appMiddleware.GetTenantID(ctx)
+	if tenantID == "" {
+		return nil, fmt.Errorf("unauthorized")
+	}
+
+	t, err := r.TicketService.GetTicketWithMessages(ctx, tenantID, id.String())
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			// Unknown or foreign ticket — the schema allows a null ticket
+			return nil, nil
+		}
+		return nil, err
+	}
+	return ticketToGraphQL(t), nil
+}
+
+// CannedResponses lists the tenant's quick-reply templates
+func (r *queryResolver) CannedResponses(ctx context.Context) ([]*model.CannedResponse, error) {
+	tenantID := appMiddleware.GetTenantID(ctx)
+	if tenantID == "" {
+		return nil, fmt.Errorf("unauthorized")
+	}
+
+	rows, err := r.DB.Query(ctx, `
+        SELECT id, name, shortcut, body
+        FROM canned_responses
+        WHERE tenant_id = $1
+        ORDER BY name
+    `, tenantID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query canned responses: %w", err)
+	}
+	defer rows.Close()
+
+	result := []*model.CannedResponse{}
+	for rows.Next() {
+		var c model.CannedResponse
+		var id string
+		if err := rows.Scan(&id, &c.Name, &c.Shortcut, &c.Body); err != nil {
+			return nil, fmt.Errorf("failed to scan canned response: %w", err)
+		}
+		c.ID = parseUUID(id)
+		result = append(result, &c)
+	}
+	return result, nil
+}
+
+// SupportMetrics aggregates ticket KPIs for the metrics dashboard
+func (r *queryResolver) SupportMetrics(ctx context.Context) (*model.SupportMetrics, error) {
+	tenantID := appMiddleware.GetTenantID(ctx)
+	if tenantID == "" {
+		return nil, fmt.Errorf("unauthorized")
+	}
+
+	m := &model.SupportMetrics{
+		TicketsByDay:      []*model.TicketsByDay{},
+		TicketsByStatus:   []*model.TicketsByStatus{},
+		TicketsByPriority: []*model.TicketsByPriority{},
+	}
+
+	// Scalar KPIs in one pass. Breach rate counts SLA-tracked tickets whose
+	// first response came late — or hasn't come and the deadline has passed.
+	err := r.DB.QueryRow(ctx, `
+        SELECT
+            COUNT(*) FILTER (WHERE status = 'open'),
+            COALESCE(AVG(EXTRACT(EPOCH FROM (first_response_at - created_at)) / 3600.0)
+                     FILTER (WHERE first_response_at IS NOT NULL), 0),
+            COALESCE(AVG(EXTRACT(EPOCH FROM (resolved_at - created_at)) / 3600.0)
+                     FILTER (WHERE resolved_at IS NOT NULL), 0),
+            COALESCE(
+                COUNT(*) FILTER (WHERE sla_first_response_at IS NOT NULL AND (
+                    (first_response_at IS NOT NULL AND first_response_at > sla_first_response_at) OR
+                    (first_response_at IS NULL AND sla_first_response_at < NOW())
+                ))::float
+                / NULLIF(COUNT(*) FILTER (WHERE sla_first_response_at IS NOT NULL), 0),
+            0)
+        FROM tickets
+        WHERE tenant_id = $1
+    `, tenantID).Scan(
+		&m.OpenTickets, &m.AvgFirstResponseHours, &m.AvgResolutionHours, &m.SLABreachRate,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query support KPIs: %w", err)
+	}
+
+	// Last 7 days, zero-filled so the chart always shows a full week
+	dayRows, err := r.DB.Query(ctx, `
+        SELECT to_char(d.day, 'Dy') AS date, COUNT(t.id)
+        FROM generate_series(CURRENT_DATE - INTERVAL '6 days', CURRENT_DATE, '1 day') AS d(day)
+        LEFT JOIN tickets t
+            ON t.tenant_id = $1 AND t.created_at::date = d.day::date
+        GROUP BY d.day
+        ORDER BY d.day
+    `, tenantID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query tickets by day: %w", err)
+	}
+	defer dayRows.Close()
+	for dayRows.Next() {
+		var row model.TicketsByDay
+		if err := dayRows.Scan(&row.Date, &row.Count); err != nil {
+			return nil, fmt.Errorf("failed to scan tickets by day: %w", err)
+		}
+		m.TicketsByDay = append(m.TicketsByDay, &row)
+	}
+
+	statusRows, err := r.DB.Query(ctx, `
+        SELECT status, COUNT(*)
+        FROM tickets
+        WHERE tenant_id = $1
+        GROUP BY status
+        ORDER BY COUNT(*) DESC
+    `, tenantID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query tickets by status: %w", err)
+	}
+	defer statusRows.Close()
+	for statusRows.Next() {
+		var row model.TicketsByStatus
+		if err := statusRows.Scan(&row.Status, &row.Count); err != nil {
+			return nil, fmt.Errorf("failed to scan tickets by status: %w", err)
+		}
+		m.TicketsByStatus = append(m.TicketsByStatus, &row)
+	}
+
+	priorityRows, err := r.DB.Query(ctx, `
+        SELECT priority, COUNT(*)
+        FROM tickets
+        WHERE tenant_id = $1
+        GROUP BY priority
+        ORDER BY COUNT(*) DESC
+    `, tenantID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query tickets by priority: %w", err)
+	}
+	defer priorityRows.Close()
+	for priorityRows.Next() {
+		var row model.TicketsByPriority
+		if err := priorityRows.Scan(&row.Priority, &row.Count); err != nil {
+			return nil, fmt.Errorf("failed to scan tickets by priority: %w", err)
+		}
+		m.TicketsByPriority = append(m.TicketsByPriority, &row)
+	}
+
+	return m, nil
 }
 
 // Mutation returns MutationResolver implementation.

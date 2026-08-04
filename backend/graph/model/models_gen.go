@@ -15,6 +15,13 @@ type AuthPayload struct {
 	User         *User  `json:"user"`
 }
 
+type CannedResponse struct {
+	ID       uuid.UUID `json:"id"`
+	Name     string    `json:"name"`
+	Shortcut *string   `json:"shortcut,omitempty"`
+	Body     string    `json:"body"`
+}
+
 type CreateCampaignInput struct {
 	Name       string    `json:"name"`
 	Subject    string    `json:"subject"`
@@ -27,6 +34,16 @@ type CreateProductInput struct {
 	BasePrice    float64  `json:"basePrice"`
 	ComparePrice *float64 `json:"comparePrice,omitempty"`
 	Tags         []string `json:"tags,omitempty"`
+}
+
+type CreateTicketInput struct {
+	Subject       string     `json:"subject"`
+	Body          string     `json:"body"`
+	CustomerEmail string     `json:"customerEmail"`
+	CustomerName  *string    `json:"customerName,omitempty"`
+	Source        *string    `json:"source,omitempty"`
+	Priority      *string    `json:"priority,omitempty"`
+	OrderID       *uuid.UUID `json:"orderId,omitempty"`
 }
 
 type EmailCampaign struct {
@@ -125,6 +142,16 @@ type ProductVariant struct {
 type Query struct {
 }
 
+type SupportMetrics struct {
+	OpenTickets           int32                `json:"openTickets"`
+	AvgFirstResponseHours float64              `json:"avgFirstResponseHours"`
+	AvgResolutionHours    float64              `json:"avgResolutionHours"`
+	SLABreachRate         float64              `json:"slaBreachRate"`
+	TicketsByDay          []*TicketsByDay      `json:"ticketsByDay"`
+	TicketsByStatus       []*TicketsByStatus   `json:"ticketsByStatus"`
+	TicketsByPriority     []*TicketsByPriority `json:"ticketsByPriority"`
+}
+
 type Tenant struct {
 	ID        uuid.UUID `json:"id"`
 	Name      string    `json:"name"`
@@ -132,6 +159,55 @@ type Tenant struct {
 	Plan      string    `json:"plan"`
 	IsActive  bool      `json:"isActive"`
 	CreatedAt time.Time `json:"createdAt"`
+}
+
+type Ticket struct {
+	ID                 uuid.UUID        `json:"id"`
+	Number             int32            `json:"number"`
+	Subject            string           `json:"subject"`
+	Status             string           `json:"status"`
+	Priority           string           `json:"priority"`
+	CustomerEmail      string           `json:"customerEmail"`
+	CustomerName       *string          `json:"customerName,omitempty"`
+	AssigneeID         *uuid.UUID       `json:"assigneeId,omitempty"`
+	AssigneeName       string           `json:"assigneeName"`
+	Source             string           `json:"source"`
+	SLAStatus          string           `json:"slaStatus"`
+	SLAFirstResponseAt *time.Time       `json:"slaFirstResponseAt,omitempty"`
+	FirstResponseAt    *time.Time       `json:"firstResponseAt,omitempty"`
+	ResolvedAt         *time.Time       `json:"resolvedAt,omitempty"`
+	AiDraftBody        *string          `json:"aiDraftBody,omitempty"`
+	AiDraftConfidence  *float64         `json:"aiDraftConfidence,omitempty"`
+	LatestMessage      string           `json:"latestMessage"`
+	UnreadCount        int32            `json:"unreadCount"`
+	Messages           []*TicketMessage `json:"messages"`
+	CreatedAt          time.Time        `json:"createdAt"`
+	UpdatedAt          time.Time        `json:"updatedAt"`
+}
+
+type TicketMessage struct {
+	ID          uuid.UUID `json:"id"`
+	AuthorType  string    `json:"authorType"`
+	AuthorName  *string   `json:"authorName,omitempty"`
+	AuthorEmail *string   `json:"authorEmail,omitempty"`
+	Body        string    `json:"body"`
+	IsInternal  bool      `json:"isInternal"`
+	CreatedAt   time.Time `json:"createdAt"`
+}
+
+type TicketsByDay struct {
+	Date  string `json:"date"`
+	Count int32  `json:"count"`
+}
+
+type TicketsByPriority struct {
+	Priority string `json:"priority"`
+	Count    int32  `json:"count"`
+}
+
+type TicketsByStatus struct {
+	Status string `json:"status"`
+	Count  int32  `json:"count"`
 }
 
 type UpdateProductInput struct {

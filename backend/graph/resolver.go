@@ -12,4 +12,5 @@ import (
 type Resolver struct {
 	DB             *pgxpool.Pool
 	ProductService *services.ProductService
+	TicketService  *services.TicketService
 }
