@@ -15,11 +15,58 @@ type AuthPayload struct {
 	User         *User  `json:"user"`
 }
 
+type Booking struct {
+	ID            uuid.UUID         `json:"id"`
+	Title         string            `json:"title"`
+	Description   string            `json:"description"`
+	Status        string            `json:"status"`
+	PaymentStatus string            `json:"paymentStatus"`
+	AgreedPrice   float64           `json:"agreedPrice"`
+	PlatformFee   float64           `json:"platformFee"`
+	CreatorPayout float64           `json:"creatorPayout"`
+	ClientEmail   string            `json:"clientEmail"`
+	ClientName    *string           `json:"clientName,omitempty"`
+	DeliveredAt   *time.Time        `json:"deliveredAt,omitempty"`
+	CompletedAt   *time.Time        `json:"completedAt,omitempty"`
+	CreatedAt     time.Time         `json:"createdAt"`
+	Service       *CreatorService   `json:"service,omitempty"`
+	Profile       *CreatorProfile   `json:"profile,omitempty"`
+	Messages      []*BookingMessage `json:"messages"`
+}
+
+type BookingMessage struct {
+	ID          uuid.UUID `json:"id"`
+	Body        string    `json:"body"`
+	SenderEmail string    `json:"senderEmail"`
+	SenderName  *string   `json:"senderName,omitempty"`
+	CreatedAt   time.Time `json:"createdAt"`
+}
+
+type BookingPayment struct {
+	BookingID     uuid.UUID `json:"bookingId"`
+	ClientSecret  *string   `json:"clientSecret,omitempty"`
+	AgreedPrice   float64   `json:"agreedPrice"`
+	PlatformFee   float64   `json:"platformFee"`
+	CreatorPayout float64   `json:"creatorPayout"`
+}
+
 type CannedResponse struct {
 	ID       uuid.UUID `json:"id"`
 	Name     string    `json:"name"`
 	Shortcut *string   `json:"shortcut,omitempty"`
 	Body     string    `json:"body"`
+}
+
+type CreateBookingInput struct {
+	ProfileID    uuid.UUID  `json:"profileId"`
+	ServiceID    *uuid.UUID `json:"serviceId,omitempty"`
+	ClientEmail  string     `json:"clientEmail"`
+	ClientName   *string    `json:"clientName,omitempty"`
+	Title        string     `json:"title"`
+	Description  string     `json:"description"`
+	Requirements *string    `json:"requirements,omitempty"`
+	DeliveryDate *time.Time `json:"deliveryDate,omitempty"`
+	AgreedPrice  float64    `json:"agreedPrice"`
 }
 
 type CreateCampaignInput struct {
@@ -36,6 +83,14 @@ type CreateProductInput struct {
 	Tags         []string `json:"tags,omitempty"`
 }
 
+type CreateServiceInput struct {
+	Title        string  `json:"title"`
+	Description  *string `json:"description,omitempty"`
+	Price        float64 `json:"price"`
+	DeliveryDays *int32  `json:"deliveryDays,omitempty"`
+	Revisions    *int32  `json:"revisions,omitempty"`
+}
+
 type CreateTicketInput struct {
 	Subject       string     `json:"subject"`
 	Body          string     `json:"body"`
@@ -44,6 +99,40 @@ type CreateTicketInput struct {
 	Source        *string    `json:"source,omitempty"`
 	Priority      *string    `json:"priority,omitempty"`
 	OrderID       *uuid.UUID `json:"orderId,omitempty"`
+}
+
+type CreatorProfile struct {
+	ID                uuid.UUID         `json:"id"`
+	DisplayName       string            `json:"displayName"`
+	Tagline           *string           `json:"tagline,omitempty"`
+	Bio               *string           `json:"bio,omitempty"`
+	AvatarURL         *string           `json:"avatarUrl,omitempty"`
+	Skills            []string          `json:"skills"`
+	IsAvailable       bool              `json:"isAvailable"`
+	HourlyRate        *float64          `json:"hourlyRate,omitempty"`
+	ResponseTime      string            `json:"responseTime"`
+	IsPublished       bool              `json:"isPublished"`
+	StripeOnboarded   bool              `json:"stripeOnboarded"`
+	StripeAccountID   *string           `json:"stripeAccountId,omitempty"`
+	TotalBookings     int32             `json:"totalBookings"`
+	CompletedBookings int32             `json:"completedBookings"`
+	AvgRating         *float64          `json:"avgRating,omitempty"`
+	TotalReviews      int32             `json:"totalReviews"`
+	Services          []*CreatorService `json:"services"`
+	PortfolioItems    []*PortfolioItem  `json:"portfolioItems"`
+	Reviews           []*Review         `json:"reviews"`
+	Bookings          []*Booking        `json:"bookings"`
+	CreatedAt         time.Time         `json:"createdAt"`
+}
+
+type CreatorService struct {
+	ID           uuid.UUID `json:"id"`
+	Title        string    `json:"title"`
+	Description  *string   `json:"description,omitempty"`
+	Price        float64   `json:"price"`
+	DeliveryDays int32     `json:"deliveryDays"`
+	Revisions    int32     `json:"revisions"`
+	IsActive     bool      `json:"isActive"`
 }
 
 type EmailCampaign struct {
@@ -98,6 +187,16 @@ type OrderItem struct {
 	ImageURL     *string   `json:"imageUrl,omitempty"`
 }
 
+type PortfolioItem struct {
+	ID          uuid.UUID `json:"id"`
+	Title       string    `json:"title"`
+	Description *string   `json:"description,omitempty"`
+	ImageURL    string    `json:"imageUrl"`
+	ProjectURL  *string   `json:"projectUrl,omitempty"`
+	Tags        []string  `json:"tags"`
+	Position    int32     `json:"position"`
+}
+
 type Product struct {
 	ID           uuid.UUID         `json:"id"`
 	TenantID     uuid.UUID         `json:"tenantId"`
@@ -140,6 +239,18 @@ type ProductVariant struct {
 }
 
 type Query struct {
+}
+
+type Review struct {
+	ID           uuid.UUID `json:"id"`
+	ReviewerName *string   `json:"reviewerName,omitempty"`
+	Rating       int32     `json:"rating"`
+	Body         *string   `json:"body,omitempty"`
+	CreatedAt    time.Time `json:"createdAt"`
+}
+
+type StripeOnboardingLink struct {
+	URL string `json:"url"`
 }
 
 type SupportMetrics struct {
@@ -208,6 +319,17 @@ type TicketsByPriority struct {
 type TicketsByStatus struct {
 	Status string `json:"status"`
 	Count  int32  `json:"count"`
+}
+
+type UpdateCreatorProfileInput struct {
+	DisplayName *string  `json:"displayName,omitempty"`
+	Tagline     *string  `json:"tagline,omitempty"`
+	Bio         *string  `json:"bio,omitempty"`
+	AvatarURL   *string  `json:"avatarUrl,omitempty"`
+	HourlyRate  *float64 `json:"hourlyRate,omitempty"`
+	Skills      []string `json:"skills,omitempty"`
+	IsAvailable *bool    `json:"isAvailable,omitempty"`
+	IsPublished *bool    `json:"isPublished,omitempty"`
 }
 
 type UpdateProductInput struct {

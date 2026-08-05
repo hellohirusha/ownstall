@@ -123,12 +123,21 @@ func main() {
 	inboundEmailHandler := &handlers.InboundEmailHandler{DB: db, TicketService: ticketService}
 	r.Post("/webhooks/email/inbound", inboundEmailHandler.HandleInboundEmail)
 
+	stripeConnect := &services.StripeConnectService{DB: db}
+	bookingService := &services.BookingService{
+		DB:            db,
+		StripeConnect: stripeConnect,
+		EmailService:  emailService,
+	}
+
 	graphqlHandler := handler.NewDefaultServer(
 		graph.NewExecutableSchema(graph.Config{
 			Resolvers: &graph.Resolver{
 				DB:             db,
 				ProductService: &services.ProductService{DB: db},
 				TicketService:  ticketService,
+				BookingService: bookingService,
+				StripeConnect:  stripeConnect,
 			},
 		}),
 	)

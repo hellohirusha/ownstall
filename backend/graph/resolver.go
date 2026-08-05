@@ -13,4 +13,6 @@ type Resolver struct {
 	DB             *pgxpool.Pool
 	ProductService *services.ProductService
 	TicketService  *services.TicketService
+	BookingService *services.BookingService
+	StripeConnect  *services.StripeConnectService
 }

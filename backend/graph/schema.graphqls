@@ -56,6 +56,15 @@ type Query {
   ticket(id: UUID!): Ticket
   cannedResponses: [CannedResponse!]!
   supportMetrics: SupportMetrics!
+
+  # Hire Me
+  # The authenticated user's own creator profile (null until created)
+  myCreatorProfile: CreatorProfile
+  # Public profile for the storefront — userId omitted returns the
+  # tenant's first published profile
+  creatorProfile(tenantId: UUID!, userId: UUID): CreatorProfile
+  # Booking with messages — auth required (creator or client)
+  booking(id: UUID!): Booking
 }
 
 # ─── MUTATIONS ───────────────────────────────────────────────
@@ -92,6 +101,20 @@ type Mutation {
   createTicket(input: CreateTicketInput!): Ticket!
   replyToTicket(ticketId: UUID!, body: String!, isInternal: Boolean!): TicketMessage!
   updateTicketStatus(ticketId: UUID!, status: String!): Ticket!
+
+  # Hire Me — auth required (creator side)
+  # Creates the profile on first call, updates it afterwards
+  updateCreatorProfile(input: UpdateCreatorProfileInput!): CreatorProfile!
+  createCreatorService(input: CreateServiceInput!): CreatorService!
+  generateStripeOnboardingLink: StripeOnboardingLink!
+  acceptBooking(id: UUID!): Booking!
+  declineBooking(id: UUID!): Booking!
+  deliverBooking(id: UUID!): Booking!
+  completeBooking(id: UUID!): Booking!
+  sendBookingMessage(bookingId: UUID!, body: String!): BookingMessage!
+
+  # Hire Me — public (storefront booking form)
+  createBooking(input: CreateBookingInput!): BookingPayment!
 }
 
 # ─── PRODUCT TYPES ───────────────────────────────────────────
@@ -189,6 +212,134 @@ input CreateCampaignInput {
   name: String!
   subject: String!
   templateId: UUID!
+}
+
+# ─── HIRE ME TYPES ───────────────────────────────────────────
+
+type CreatorProfile {
+  id: UUID!
+  displayName: String!
+  tagline: String
+  bio: String
+  avatarUrl: String
+  skills: [String!]!
+  isAvailable: Boolean!
+  hourlyRate: Float
+  # 'within_hour' | 'within_day' | 'within_week'
+  responseTime: String!
+  isPublished: Boolean!
+  stripeOnboarded: Boolean!
+  stripeAccountId: String
+  totalBookings: Int!
+  completedBookings: Int!
+  avgRating: Float
+  totalReviews: Int!
+  services: [CreatorService!]!
+  portfolioItems: [PortfolioItem!]!
+  reviews: [Review!]!
+  # Owner-only — other callers get an empty list
+  bookings(status: String): [Booking!]!
+  createdAt: Time!
+}
+
+type CreatorService {
+  id: UUID!
+  title: String!
+  description: String
+  price: Float!
+  deliveryDays: Int!
+  revisions: Int!
+  isActive: Boolean!
+}
+
+type PortfolioItem {
+  id: UUID!
+  title: String!
+  description: String
+  imageUrl: String!
+  projectUrl: String
+  tags: [String!]!
+  position: Int!
+}
+
+type Review {
+  id: UUID!
+  reviewerName: String
+  rating: Int!
+  body: String
+  createdAt: Time!
+}
+
+type Booking {
+  id: UUID!
+  title: String!
+  description: String!
+  status: String!
+  paymentStatus: String!
+  agreedPrice: Float!
+  platformFee: Float!
+  creatorPayout: Float!
+  clientEmail: String!
+  clientName: String
+  deliveredAt: Time
+  completedAt: Time
+  createdAt: Time!
+  service: CreatorService
+  profile: CreatorProfile
+  messages: [BookingMessage!]!
+}
+
+type BookingMessage {
+  id: UUID!
+  body: String!
+  senderEmail: String!
+  senderName: String
+  createdAt: Time!
+}
+
+type BookingPayment {
+  bookingId: UUID!
+  # Stripe PaymentIntent client secret — null when the creator
+  # has not connected Stripe yet
+  clientSecret: String
+  agreedPrice: Float!
+  platformFee: Float!
+  creatorPayout: Float!
+}
+
+type StripeOnboardingLink {
+  url: String!
+}
+
+input UpdateCreatorProfileInput {
+  displayName: String
+  tagline: String
+  bio: String
+  avatarUrl: String
+  hourlyRate: Float
+  skills: [String!]
+  isAvailable: Boolean
+  isPublished: Boolean
+}
+
+input CreateServiceInput {
+  title: String!
+  description: String
+  price: Float!
+  deliveryDays: Int
+  revisions: Int
+}
+
+input CreateBookingInput {
+  profileId: UUID!
+  serviceId: UUID
+  clientEmail: String!
+  clientName: String
+  title: String!
+  description: String!
+  requirements: String
+  deliveryDate: Time
+  agreedPrice: Float!
 }
 
 # ─── REPLY TYPES ─────────────────────────────────────────────
