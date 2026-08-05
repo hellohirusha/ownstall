@@ -385,11 +385,19 @@ func (s *TicketService) UpdateTicketStatus(ctx context.Context, tenantID, ticket
 		return err
 	}
 
+	// An empty userID means no human performed the change (the AI
+	// auto-reply resolving a ticket). user_id is nullable, so record
+	// NULL rather than letting an invalid UUID fail the insert.
+	var actor any
+	if userID != "" {
+		actor = userID
+	}
+
 	// Event is best-effort — the status change itself already succeeded
 	_, _ = s.DB.Exec(ctx, `
         INSERT INTO ticket_events (ticket_id, user_id, event_type, metadata)
         VALUES ($1, $2, 'status_changed', $3)
-    `, ticketID, userID, fmt.Sprintf(`{"new_status":"%s"}`, newStatus))
+    `, ticketID, actor, fmt.Sprintf(`{"new_status":"%s"}`, newStatus))
 
 	return nil
 }
