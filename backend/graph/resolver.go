@@ -4,6 +4,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/hellohirusha/ownstall/internal/services"
+	"github.com/hellohirusha/ownstall/pkg/ai"
 )
 
 // This file will not be regenerated automatically.
@@ -17,4 +18,10 @@ type Resolver struct {
 	StripeConnect  *services.StripeConnectService
 
 	ManufacturingService *services.ManufacturingService
+
+	AI              *ai.Client
+	CopyGenerator   *services.CopyGeneratorService
+	Recommendations *services.RecommendationService
+	AutoReply       *services.AutoReplyService
+	ImageQA         *services.ImageQAService
 }

@@ -21,6 +21,7 @@ import (
 	"github.com/hellohirusha/ownstall/internal/handlers"
 	appMiddleware "github.com/hellohirusha/ownstall/internal/middleware"
 	"github.com/hellohirusha/ownstall/internal/services"
+	"github.com/hellohirusha/ownstall/pkg/ai"
 	"github.com/hellohirusha/ownstall/pkg/database"
 	"github.com/hellohirusha/ownstall/pkg/queue"
 	"github.com/hellohirusha/ownstall/pkg/storage"
@@ -130,6 +131,48 @@ func main() {
 	inboundEmailHandler := &handlers.InboundEmailHandler{DB: db, TicketService: ticketService}
 	r.Post("/webhooks/email/inbound", inboundEmailHandler.HandleInboundEmail)
 
+	// AI features. A missing API key yields a disabled client whose
+	// calls return ai.ErrDisabled, so the API still boots without one.
+	aiClient := ai.NewClient(db)
+	if aiClient.Enabled() {
+		log.Printf("AI enabled (model: %s)", aiClient.Model())
+	} else {
+		log.Println("WARNING: no GROQ_API_KEY or OPENAI_API_KEY — AI features disabled")
+	}
+
+	recommendationService := &services.RecommendationService{DB: db, Embedder: ai.LexicalEmbedder{}}
+	copyGenerator := &services.CopyGeneratorService{
+		DB:              db,
+		AI:              aiClient,
+		Recommendations: recommendationService,
+	}
+	autoReplyService := &services.AutoReplyService{
+		DB:            db,
+		AI:            aiClient,
+		TicketService: ticketService,
+	}
+	imageQAService := &services.ImageQAService{DB: db, AI: aiClient}
+
+	// Auto-reply drafter — drafts replies for new tickets every 2 minutes
+	if aiClient.Enabled() {
+		go func() {
+			ticker := time.NewTicker(2 * time.Minute)
+			defer ticker.Stop()
+			for range ticker.C {
+				drafted, err := autoReplyService.ProcessNewTickets(
+					context.Background(), services.DefaultAutoReplyConfig,
+				)
+				if err != nil {
+					log.Printf("auto-reply drafter: %v", err)
+					continue
+				}
+				if drafted > 0 {
+					log.Printf("auto-reply drafter: drafted %d ticket(s)", drafted)
+				}
+			}
+		}()
+	}
+
 	stripeConnect := &services.StripeConnectService{DB: db}
 	bookingService := &services.BookingService{
 		DB:            db,
@@ -147,6 +190,12 @@ func main() {
 				StripeConnect:  stripeConnect,
 
 				ManufacturingService: manufacturingService,
+
+				AI:              aiClient,
+				CopyGenerator:   copyGenerator,
+				Recommendations: recommendationService,
+				AutoReply:       autoReplyService,
+				ImageQA:         imageQAService,
 			},
 		}),
 	)

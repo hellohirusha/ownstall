@@ -8,11 +8,32 @@ import (
 	"github.com/google/uuid"
 )
 
+type AIStats struct {
+	Enabled            bool                 `json:"enabled"`
+	Model              string               `json:"model"`
+	TotalRequests      int32                `json:"totalRequests"`
+	CostUsd            float64              `json:"costUsd"`
+	CostLimitUsd       float64              `json:"costLimitUsd"`
+	CostRemainingUsd   float64              `json:"costRemainingUsd"`
+	CircuitBreakerOpen bool                 `json:"circuitBreakerOpen"`
+	CopyGen            *CopyGenStats        `json:"copyGen"`
+	AutoReply          *AutoReplyStats      `json:"autoReply"`
+	Recommendations    *RecommendationStats `json:"recommendations"`
+}
+
 type AuthPayload struct {
 	AccessToken  string `json:"accessToken"`
 	RefreshToken string `json:"refreshToken"`
 	ExpiresIn    int32  `json:"expiresIn"`
 	User         *User  `json:"user"`
+}
+
+type AutoReplyStats struct {
+	Drafted             int32   `json:"drafted"`
+	AutoSent            int32   `json:"autoSent"`
+	AvgConfidence       float64 `json:"avgConfidence"`
+	TicketsMissingDraft int32   `json:"ticketsMissingDraft"`
+	DeflectionRate      float64 `json:"deflectionRate"`
 }
 
 type Booking struct {
@@ -55,6 +76,12 @@ type CannedResponse struct {
 	Name     string    `json:"name"`
 	Shortcut *string   `json:"shortcut,omitempty"`
 	Body     string    `json:"body"`
+}
+
+type CopyGenStats struct {
+	Generated       int32   `json:"generated"`
+	AutoPublished   int32   `json:"autoPublished"`
+	AvgQualityScore float64 `json:"avgQualityScore"`
 }
 
 type CreateBookingInput struct {
@@ -169,6 +196,27 @@ type EmailTemplate struct {
 	CreatedAt   time.Time `json:"createdAt"`
 }
 
+type GeneratedCopy struct {
+	Body            string  `json:"body"`
+	QualityScore    float64 `json:"qualityScore"`
+	ToneLabel       string  `json:"toneLabel"`
+	WordCount       int32   `json:"wordCount"`
+	WillAutoPublish bool    `json:"willAutoPublish"`
+}
+
+type ImageQAResult struct {
+	ImageURL     string   `json:"imageUrl"`
+	QualityScore float64  `json:"qualityScore"`
+	Issues       []string `json:"issues"`
+	Suggestion   *string  `json:"suggestion,omitempty"`
+	Passed       bool     `json:"passed"`
+}
+
+type IndexResult struct {
+	Success bool  `json:"success"`
+	Count   int32 `json:"count"`
+}
+
 type Mutation struct {
 }
 
@@ -203,6 +251,10 @@ type PortfolioItem struct {
 	Position    int32     `json:"position"`
 }
 
+type ProcessDraftsResult struct {
+	Processed int32 `json:"processed"`
+}
+
 type Product struct {
 	ID           uuid.UUID         `json:"id"`
 	TenantID     uuid.UUID         `json:"tenantId"`
@@ -226,6 +278,11 @@ type ProductImage struct {
 	URL      string    `json:"url"`
 	AltText  *string   `json:"altText,omitempty"`
 	Position int32     `json:"position"`
+}
+
+type ProductRef struct {
+	ID   uuid.UUID `json:"id"`
+	Name string    `json:"name"`
 }
 
 type ProductVariant struct {
@@ -265,6 +322,20 @@ type ProductionStats struct {
 }
 
 type Query struct {
+}
+
+type RecommendationStats struct {
+	Indexed int32 `json:"indexed"`
+	Missing int32 `json:"missing"`
+}
+
+type RecommendedProduct struct {
+	ID              uuid.UUID `json:"id"`
+	Name            string    `json:"name"`
+	Slug            string    `json:"slug"`
+	BasePrice       float64   `json:"basePrice"`
+	ImageURL        *string   `json:"imageUrl,omitempty"`
+	SimilarityScore float64   `json:"similarityScore"`
 }
 
 type Review struct {
