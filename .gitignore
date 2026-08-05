@@ -13,6 +13,7 @@
 coverage.*
 *.coverprofile
 profile.cov
+backend/ai_eval_report.json
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
