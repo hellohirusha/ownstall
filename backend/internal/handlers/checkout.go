@@ -18,8 +18,10 @@ import (
 )
 
 type CheckoutHandler struct {
-	DB    *pgxpool.Pool
-	Email *services.EmailService
+	DB            *pgxpool.Pool
+	Email         *services.EmailService
+	Manufacturing *services.ManufacturingService
+	Push          *services.PushService
 }
 
 // CartItem represents a single item passed from the frontend
@@ -316,8 +318,9 @@ func (h *CheckoutHandler) HandleStripeWebhook(w http.ResponseWriter, r *http.Req
 		// Decrease inventory for each ordered variant
 		go h.decrementInventory(orderID)
 
+		tenantID := s.Metadata["tenant_id"]
+
 		if h.Email != nil && h.Email.Queue != nil {
-			tenantID := s.Metadata["tenant_id"]
 			go func() {
 				if err := h.Email.SendOrderConfirmation(context.Background(), tenantID, orderID); err != nil {
 					fmt.Printf("ERROR: order confirmation for %s failed: %v\n", orderID, err)
@@ -325,6 +328,30 @@ func (h *CheckoutHandler) HandleStripeWebhook(w http.ResponseWriter, r *http.Req
 			}()
 		} else {
 			fmt.Printf("WARNING: queue unavailable, skipping confirmation email for order %s\n", orderID)
+		}
+
+		// Hand the paid order to the production pipeline
+		if h.Manufacturing != nil && tenantID != "" {
+			go func() {
+				if err := h.Manufacturing.EnqueueOrder(context.Background(), tenantID, orderID); err != nil {
+					fmt.Printf("ERROR: failed to enqueue order %s for production: %v\n", orderID, err)
+				}
+			}()
+		}
+
+		// Push the sale to the merchant's phone
+		if h.Push != nil && tenantID != "" {
+			orderTotal := float64(s.AmountTotal) / 100
+			customer := s.CustomerEmail
+			go func() {
+				if err := h.Push.NotifyTenant(context.Background(), tenantID,
+					"New order 🎉",
+					fmt.Sprintf("$%.2f from %s", orderTotal, customer),
+					map[string]string{"type": "order", "order_id": orderID},
+				); err != nil {
+					fmt.Printf("ERROR: order push for %s failed: %v\n", orderID, err)
+				}
+			}()
 		}
 
 		fmt.Printf("Order %s paid via Stripe session %s\n", orderID, s.ID)
