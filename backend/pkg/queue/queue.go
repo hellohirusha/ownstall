@@ -210,6 +210,16 @@ func (c *Client) promoteScheduledJobs(ctx context.Context, queueName string) {
 	}
 }
 
+// Redis exposes the underlying client so other components (the rate
+// limiter) can reuse this connection pool instead of opening a second
+// one against the same server.
+func (c *Client) Redis() *redis.Client {
+	if c == nil {
+		return nil
+	}
+	return c.redis
+}
+
 // Queue stats for monitoring dashboard
 func (c *Client) Stats(ctx context.Context, queueName string) map[string]int64 {
 	pending, _ := c.redis.LLen(ctx, queueName).Result()
