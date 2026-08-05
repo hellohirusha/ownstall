@@ -40,13 +40,29 @@ jobs:
 
       - uses: actions/setup-go@v4
         with:
-          go-version: "1.24"
+          # Must match the go directive in backend/go.mod: a lower
+          # version silently pulls a second toolchain on every run,
+          # and `go mod tidy` output differs between them.
+          go-version: "1.25"
           cache: true
           cache-dependency-path: backend/go.sum
 
       - name: Install dependencies
         working-directory: backend
         run: go mod download
+
+      # Catches a go.mod that drifted from the imports actually used —
+      # the failure mode is a build that works locally from a warm
+      # module cache and breaks on a clean checkout.
+      - name: Verify go.mod is tidy
+        working-directory: backend
+        run: |
+          go mod tidy
+          git diff --exit-code go.mod go.sum
+
+      - name: Run go vet
+        working-directory: backend
+        run: go vet ./...
 
       - name: Run linter
         uses: golangci/golangci-lint-action@v7
@@ -60,6 +76,31 @@ jobs:
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ownstall_test
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
+
+  # Advisory, not a gate: gosec's value is the report, and failing the
+  # build on every heuristic finding trains people to ignore it.
+  security:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: test
+
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Run gosec
+        uses: securego/gosec@master
+        with:
+          args: "-no-fail -fmt sarif -out gosec-results.sarif ./backend/..."
+
+      - name: Upload gosec report
+        uses: actions/upload-artifact@v4
+        with:
+          name: gosec-results
+          path: gosec-results.sarif
+          if-no-files-found: warn
 
   deploy:
     needs: test

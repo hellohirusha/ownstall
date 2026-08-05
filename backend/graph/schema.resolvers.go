@@ -715,6 +715,99 @@ func (r *mutationResolver) CreateBooking(ctx context.Context, input model.Create
 	return payment, nil
 }
 
+// GenerateProductCopy generates three tone variants for a tenant-owned
+// product and auto-publishes the best if it clears the quality bar
+func (r *mutationResolver) GenerateProductCopy(ctx context.Context, productID uuid.UUID) ([]*model.GeneratedCopy, error) {
+	tenantID := appMiddleware.GetTenantID(ctx)
+	if tenantID == "" {
+		return nil, fmt.Errorf("unauthorized")
+	}
+
+	copies, err := r.CopyGenerator.GenerateProductCopy(ctx, tenantID, productID.String())
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]*model.GeneratedCopy, 0, len(copies))
+	for _, c := range copies {
+		result = append(result, &model.GeneratedCopy{
+			Body:            c.Body,
+			QualityScore:    c.QualityScore,
+			ToneLabel:       c.ToneLabel,
+			WordCount:       int32(c.WordCount),
+			WillAutoPublish: c.WillAutoPublish,
+		})
+	}
+	return result, nil
+}
+
+// IndexAllProducts rebuilds similarity vectors for the whole active catalogue
+func (r *mutationResolver) IndexAllProducts(ctx context.Context) (*model.IndexResult, error) {
+	tenantID := appMiddleware.GetTenantID(ctx)
+	if tenantID == "" {
+		return nil, fmt.Errorf("unauthorized")
+	}
+
+	count, err := r.Recommendations.IndexAllProducts(ctx, tenantID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &model.IndexResult{Success: true, Count: int32(count)}, nil
+}
+
+// ProcessNewTickets drafts AI replies for open tickets that lack one
+func (r *mutationResolver) ProcessNewTickets(ctx context.Context) (*model.ProcessDraftsResult, error) {
+	tenantID := appMiddleware.GetTenantID(ctx)
+	if tenantID == "" {
+		return nil, fmt.Errorf("unauthorized")
+	}
+
+	processed, err := r.AutoReply.ProcessNewTickets(ctx, services.DefaultAutoReplyConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	return &model.ProcessDraftsResult{Processed: int32(processed)}, nil
+}
+
+// AnalyzeProductImages runs vision QA over every photo on a product
+func (r *mutationResolver) AnalyzeProductImages(ctx context.Context, productID uuid.UUID) ([]*model.ImageQAResult, error) {
+	tenantID := appMiddleware.GetTenantID(ctx)
+	if tenantID == "" {
+		return nil, fmt.Errorf("unauthorized")
+	}
+
+	results, err := r.ImageQA.AnalyzeProductImages(ctx, tenantID, productID.String())
+	if err != nil {
+		return nil, err
+	}
+
+	out := make([]*model.ImageQAResult, 0, len(results))
+	for _, res := range results {
+		suggestion := res.Suggestion
+		out = append(out, &model.ImageQAResult{
+			ImageURL:     res.ImageURL,
+			QualityScore: res.QualityScore,
+			Issues:       res.Issues,
+			Suggestion:   &suggestion,
+			Passed:       res.Passed,
+		})
+	}
+	return out, nil
+}
+
+// RecordCopyImpression is public: the storefront reports which copy
+// variant a visitor saw so conversions can be attributed to it
+func (r *mutationResolver) RecordCopyImpression(ctx context.Context, tenantID uuid.UUID, productID uuid.UUID, variant string, sessionID string) (bool, error) {
+	if err := r.CopyGenerator.RecordCopyImpression(
+		ctx, tenantID.String(), productID.String(), variant, sessionID,
+	); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
 // Order loads the order this production item was created from
 func (r *productionQueueItemResolver) Order(ctx context.Context, obj *model.ProductionQueueItem) (*model.Order, error) {
 	tenantID := appMiddleware.GetTenantID(ctx)
@@ -1267,6 +1360,104 @@ func (r *queryResolver) Booking(ctx context.Context, id uuid.UUID) (*model.Booki
 		return nil, err
 	}
 	return booking, nil
+}
+
+// AiStats reports month-to-date AI spend and per-feature usage
+func (r *queryResolver) AiStats(ctx context.Context) (*model.AIStats, error) {
+	tenantID := appMiddleware.GetTenantID(ctx)
+	if tenantID == "" {
+		return nil, fmt.Errorf("unauthorized")
+	}
+
+	usage := r.AI.Stats(ctx)
+
+	copyStats, err := r.CopyGenerator.Stats(ctx, tenantID)
+	if err != nil {
+		return nil, err
+	}
+	replyStats, err := r.AutoReply.Stats(ctx, tenantID)
+	if err != nil {
+		return nil, err
+	}
+	recStats, err := r.Recommendations.Stats(ctx, tenantID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &model.AIStats{
+		Enabled:            usage.Enabled,
+		Model:              usage.Model,
+		TotalRequests:      int32(usage.TotalRequests),
+		CostUsd:            usage.TotalCostUSD,
+		CostLimitUsd:       usage.CostLimitUSD,
+		CostRemainingUsd:   usage.CostRemainingUSD,
+		CircuitBreakerOpen: usage.CircuitBreakerOpen,
+		CopyGen: &model.CopyGenStats{
+			Generated:       int32(copyStats.Generated),
+			AutoPublished:   int32(copyStats.AutoPublished),
+			AvgQualityScore: copyStats.AvgQualityScore,
+		},
+		AutoReply: &model.AutoReplyStats{
+			Drafted:             int32(replyStats.Drafted),
+			AutoSent:            int32(replyStats.AutoSent),
+			AvgConfidence:       replyStats.AvgConfidence,
+			TicketsMissingDraft: int32(replyStats.TicketsMissingDraft),
+			DeflectionRate:      replyStats.DeflectionRate,
+		},
+		Recommendations: &model.RecommendationStats{
+			Indexed: int32(recStats.Indexed),
+			Missing: int32(recStats.Missing),
+		},
+	}, nil
+}
+
+// ProductsMissingCopy lists products that have never had AI copy generated
+func (r *queryResolver) ProductsMissingCopy(ctx context.Context) ([]*model.ProductRef, error) {
+	tenantID := appMiddleware.GetTenantID(ctx)
+	if tenantID == "" {
+		return nil, fmt.Errorf("unauthorized")
+	}
+
+	refs, err := r.CopyGenerator.ProductsMissingCopy(ctx, tenantID)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]*model.ProductRef, 0, len(refs))
+	for _, ref := range refs {
+		result = append(result, &model.ProductRef{
+			ID:   parseUUID(ref.ID),
+			Name: ref.Name,
+		})
+	}
+	return result, nil
+}
+
+// RecommendedProducts is public: the storefront shows similar products
+// on a product page, so it takes an explicit tenantId
+func (r *queryResolver) RecommendedProducts(ctx context.Context, tenantID uuid.UUID, productID uuid.UUID, limit *int32) ([]*model.RecommendedProduct, error) {
+	max := 5
+	if limit != nil {
+		max = int(*limit)
+	}
+
+	recs, err := r.Recommendations.GetRecommendations(ctx, tenantID.String(), productID.String(), max)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]*model.RecommendedProduct, 0, len(recs))
+	for _, rec := range recs {
+		result = append(result, &model.RecommendedProduct{
+			ID:              parseUUID(rec.ID),
+			Name:            rec.Name,
+			Slug:            rec.Slug,
+			BasePrice:       rec.BasePrice,
+			ImageURL:        rec.ImageURL,
+			SimilarityScore: rec.SimilarityScore,
+		})
+	}
+	return result, nil
 }
 
 // Booking returns BookingResolver implementation.

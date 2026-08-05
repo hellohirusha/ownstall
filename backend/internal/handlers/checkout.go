@@ -15,6 +15,7 @@ import (
 
 	appMiddleware "github.com/hellohirusha/ownstall/internal/middleware"
 	"github.com/hellohirusha/ownstall/internal/services"
+	"github.com/hellohirusha/ownstall/pkg/telemetry"
 )
 
 type CheckoutHandler struct {
@@ -314,6 +315,11 @@ func (h *CheckoutHandler) HandleStripeWebhook(w http.ResponseWriter, r *http.Req
 			http.Error(w, "database error", http.StatusInternalServerError)
 			return
 		}
+
+		// Counted here rather than at session creation: this is the
+		// point money actually moved.
+		telemetry.OrdersTotal.WithLabelValues("paid").Inc()
+		telemetry.OrderValueUSD.Observe(float64(s.AmountTotal) / 100)
 
 		// Decrease inventory for each ordered variant
 		go h.decrementInventory(orderID)

@@ -69,6 +69,18 @@ type Query {
   creatorProfile(tenantId: UUID!, userId: UUID): CreatorProfile
   # Booking with messages — auth required (creator or client)
   booking(id: UUID!): Booking
+
+  # AI — auth required
+  aiStats: AIStats!
+  # Products that have never had AI copy generated
+  productsMissingCopy: [ProductRef!]!
+
+  # AI — public (storefront "you might also like")
+  recommendedProducts(
+    tenantId: UUID!
+    productId: UUID!
+    limit: Int
+  ): [RecommendedProduct!]!
 }
 
 # ─── MUTATIONS ───────────────────────────────────────────────
@@ -127,6 +139,22 @@ type Mutation {
 
   # Hire Me — public (storefront booking form)
   createBooking(input: CreateBookingInput!): BookingPayment!
+
+  # AI — auth required
+  # Returns three tone variants; the best is published automatically
+  # when it scores at or above the quality threshold
+  generateProductCopy(productId: UUID!): [GeneratedCopy!]!
+  indexAllProducts: IndexResult!
+  processNewTickets: ProcessDraftsResult!
+  analyzeProductImages(productId: UUID!): [ImageQAResult!]!
+
+  # AI — public (storefront A/B instrumentation)
+  recordCopyImpression(
+    tenantId: UUID!
+    productId: UUID!
+    variant: String!
+    sessionId: String!
+  ): Boolean!
 }
 
 # ─── PRODUCT TYPES ───────────────────────────────────────────
@@ -496,4 +524,83 @@ type OrderItem {
   unitPrice: Float!
   totalPrice: Float!
   imageUrl: String
+}
+
+# ─── AI TYPES ────────────────────────────────────────────────
+
+type AIStats {
+  # False when no provider API key is configured
+  enabled: Boolean!
+  model: String!
+  # Month-to-date, read from ai_logs so it survives restarts
+  totalRequests: Int!
+  costUsd: Float!
+  costLimitUsd: Float!
+  costRemainingUsd: Float!
+  # True once the budget is spent — all AI calls fail fast
+  circuitBreakerOpen: Boolean!
+
+  copyGen: CopyGenStats!
+  autoReply: AutoReplyStats!
+  recommendations: RecommendationStats!
+}
+
+type CopyGenStats {
+  generated: Int!
+  autoPublished: Int!
+  avgQualityScore: Float!
+}
+
+type AutoReplyStats {
+  drafted: Int!
+  autoSent: Int!
+  avgConfidence: Float!
+  ticketsMissingDraft: Int!
+  # Fraction (0-1) of drafted tickets resolved without a human reply
+  deflectionRate: Float!
+}
+
+type RecommendationStats {
+  indexed: Int!
+  missing: Int!
+}
+
+type GeneratedCopy {
+  body: String!
+  qualityScore: Float!
+  toneLabel: String!
+  wordCount: Int!
+  willAutoPublish: Boolean!
+}
+
+type RecommendedProduct {
+  id: UUID!
+  name: String!
+  slug: String!
+  basePrice: Float!
+  imageUrl: String
+  # Cosine similarity, 0-1, higher is more alike
+  similarityScore: Float!
+}
+
+type ProductRef {
+  id: UUID!
+  name: String!
+}
+
+type IndexResult {
+  success: Boolean!
+  count: Int!
+}
+
+type ProcessDraftsResult {
+  processed: Int!
+}
+
+type ImageQAResult {
+  imageUrl: String!
+  qualityScore: Float!
+  issues: [String!]!
+  suggestion: String
+  passed: Boolean!
 }
