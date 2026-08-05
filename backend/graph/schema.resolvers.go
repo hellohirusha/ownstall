@@ -18,6 +18,113 @@ import (
 	pgx "github.com/jackc/pgx/v5"
 )
 
+// Service loads the booked service package, if the booking used one
+func (r *bookingResolver) Service(ctx context.Context, obj *model.Booking) (*model.CreatorService, error) {
+	row := r.DB.QueryRow(ctx, `
+        SELECT s.id, s.title, s.description, s.price, s.delivery_days, s.revisions, s.is_active
+        FROM creator_services s
+        JOIN bookings b ON b.service_id = s.id
+        WHERE b.id = $1
+    `, obj.ID.String())
+
+	svc, err := scanCreatorService(row)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			// Custom booking with no service package attached
+			return nil, nil
+		}
+		return nil, err
+	}
+	return svc, nil
+}
+
+// Profile loads the creator the booking belongs to
+func (r *bookingResolver) Profile(ctx context.Context, obj *model.Booking) (*model.CreatorProfile, error) {
+	profile, err := r.fetchCreatorProfile(ctx,
+		"id = (SELECT profile_id FROM bookings WHERE id = $1)", obj.ID.String())
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return profile, nil
+}
+
+// Messages loads the booking's conversation thread
+func (r *bookingResolver) Messages(ctx context.Context, obj *model.Booking) ([]*model.BookingMessage, error) {
+	result := []*model.BookingMessage{}
+
+	rows, err := r.DB.Query(ctx, `
+        SELECT id, body, sender_email, sender_name, created_at
+        FROM booking_messages
+        WHERE booking_id = $1
+        ORDER BY created_at ASC
+    `, obj.ID.String())
+	if err != nil {
+		return nil, fmt.Errorf("failed to query booking messages: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var m model.BookingMessage
+		var msgID string
+		if err := rows.Scan(&msgID, &m.Body, &m.SenderEmail, &m.SenderName, &m.CreatedAt); err != nil {
+			return nil, fmt.Errorf("failed to scan booking message: %w", err)
+		}
+		m.ID = parseUUID(msgID)
+		result = append(result, &m)
+	}
+	return result, nil
+}
+
+// Bookings lists a profile's bookings — owner only; anyone else
+// (including the public profile page) gets an empty list
+func (r *creatorProfileResolver) Bookings(ctx context.Context, obj *model.CreatorProfile, status *string) ([]*model.Booking, error) {
+	result := []*model.Booking{}
+
+	tenantID := appMiddleware.GetTenantID(ctx)
+	userID := appMiddleware.GetUserID(ctx)
+	if tenantID == "" || userID == "" {
+		return result, nil
+	}
+
+	var ownerID string
+	err := r.DB.QueryRow(ctx, `
+        SELECT user_id FROM creator_profiles
+        WHERE id = $1 AND tenant_id = $2
+    `, obj.ID.String(), tenantID).Scan(&ownerID)
+	if err != nil || ownerID != userID {
+		return result, nil
+	}
+
+	query := `
+        SELECT ` + bookingColumns + `
+        FROM bookings b
+        WHERE b.profile_id = $1`
+	args := []interface{}{obj.ID.String()}
+	if status != nil && *status != "" {
+		query += " AND b.status = $2"
+		args = append(args, *status)
+	}
+	query += " ORDER BY b.created_at DESC"
+
+	rows, err := r.DB.Query(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query bookings: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		b, err := scanBooking(rows)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, b)
+	}
+	return result, nil
+}
+
 // Login is the resolver for the login field.
 func (r *mutationResolver) Login(ctx context.Context, email string, password string) (*model.AuthPayload, error) {
 	panic(fmt.Errorf("not implemented: Login - login"))
@@ -154,6 +261,379 @@ func (r *mutationResolver) ScheduleCampaign(ctx context.Context, id uuid.UUID, s
 	}
 
 	return r.fetchCampaign(ctx, tenantID, id.String())
+}
+
+// CreateTicket opens a support ticket for the authenticated tenant
+func (r *mutationResolver) CreateTicket(ctx context.Context, input model.CreateTicketInput) (*model.Ticket, error) {
+	tenantID := appMiddleware.GetTenantID(ctx)
+	if tenantID == "" {
+		return nil, fmt.Errorf("unauthorized")
+	}
+
+	in := services.CreateTicketInput{
+		TenantID:      tenantID,
+		Subject:       input.Subject,
+		Body:          input.Body,
+		CustomerEmail: input.CustomerEmail,
+		Source:        "web",
+	}
+	if input.CustomerName != nil {
+		in.CustomerName = *input.CustomerName
+	}
+	if input.Source != nil && *input.Source != "" {
+		in.Source = *input.Source
+	}
+	if input.Priority != nil {
+		in.Priority = *input.Priority
+	}
+	if input.OrderID != nil {
+		in.OrderID = input.OrderID.String()
+	}
+
+	ticket, err := r.TicketService.CreateTicket(ctx, in)
+	if err != nil {
+		return nil, err
+	}
+	return ticketToGraphQL(ticket), nil
+}
+
+// ReplyToTicket adds a staff reply or internal note to a tenant-owned ticket
+func (r *mutationResolver) ReplyToTicket(ctx context.Context, ticketID uuid.UUID, body string, isInternal bool) (*model.TicketMessage, error) {
+	tenantID := appMiddleware.GetTenantID(ctx)
+	userID := appMiddleware.GetUserID(ctx)
+	if tenantID == "" || userID == "" {
+		return nil, fmt.Errorf("unauthorized")
+	}
+
+	// The service writes by ticket id alone — verify ownership first
+	var owned bool
+	if err := r.DB.QueryRow(ctx,
+		"SELECT EXISTS(SELECT 1 FROM tickets WHERE id = $1 AND tenant_id = $2)",
+		ticketID.String(), tenantID,
+	).Scan(&owned); err != nil {
+		return nil, fmt.Errorf("failed to verify ticket: %w", err)
+	}
+	if !owned {
+		return nil, fmt.Errorf("ticket not found")
+	}
+
+	msg, err := r.TicketService.ReplyToTicket(ctx, services.ReplyInput{
+		TenantID:   tenantID,
+		TicketID:   ticketID.String(),
+		AuthorID:   userID,
+		Body:       body,
+		IsInternal: isInternal,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return ticketMessageToGraphQL(msg), nil
+}
+
+// UpdateTicketStatus changes a ticket's status and returns the updated ticket
+func (r *mutationResolver) UpdateTicketStatus(ctx context.Context, ticketID uuid.UUID, status string) (*model.Ticket, error) {
+	tenantID := appMiddleware.GetTenantID(ctx)
+	userID := appMiddleware.GetUserID(ctx)
+	if tenantID == "" || userID == "" {
+		return nil, fmt.Errorf("unauthorized")
+	}
+
+	if err := r.TicketService.UpdateTicketStatus(ctx, tenantID, ticketID.String(), userID, status); err != nil {
+		return nil, fmt.Errorf("failed to update ticket status: %w", err)
+	}
+
+	ticket, err := r.TicketService.GetTicketWithMessages(ctx, tenantID, ticketID.String())
+	if err != nil {
+		return nil, err
+	}
+	return ticketToGraphQL(ticket), nil
+}
+
+// UpdateCreatorProfile creates the caller's profile on first save and
+// updates provided fields afterwards (omitted fields keep their value)
+func (r *mutationResolver) UpdateCreatorProfile(ctx context.Context, input model.UpdateCreatorProfileInput) (*model.CreatorProfile, error) {
+	tenantID := appMiddleware.GetTenantID(ctx)
+	userID := appMiddleware.GetUserID(ctx)
+	if tenantID == "" || userID == "" {
+		return nil, fmt.Errorf("unauthorized")
+	}
+
+	// On first save without a display name, fall back to the user's
+	// name (or the local part of their email)
+	_, err := r.DB.Exec(ctx, `
+        INSERT INTO creator_profiles
+            (tenant_id, user_id, display_name, tagline, bio, avatar_url,
+             hourly_rate, skills, is_available, is_published)
+        VALUES ($1, $2,
+            COALESCE($3, (
+                SELECT COALESCE(
+                    NULLIF(TRIM(COALESCE(first_name,'') || ' ' || COALESCE(last_name,'')), ''),
+                    split_part(email, '@', 1))
+                FROM users WHERE id = $2)),
+            $4, $5, $6, $7,
+            COALESCE($8, '{}'::text[]), COALESCE($9, true), COALESCE($10, false))
+        ON CONFLICT (tenant_id, user_id) DO UPDATE SET
+            display_name = COALESCE($3, creator_profiles.display_name),
+            tagline      = COALESCE($4, creator_profiles.tagline),
+            bio          = COALESCE($5, creator_profiles.bio),
+            avatar_url   = COALESCE($6, creator_profiles.avatar_url),
+            hourly_rate  = COALESCE($7, creator_profiles.hourly_rate),
+            skills       = COALESCE($8::text[], creator_profiles.skills),
+            is_available = COALESCE($9, creator_profiles.is_available),
+            is_published = COALESCE($10, creator_profiles.is_published)
+    `, tenantID, userID,
+		input.DisplayName, input.Tagline, input.Bio, input.AvatarURL,
+		input.HourlyRate, input.Skills, input.IsAvailable, input.IsPublished)
+	if err != nil {
+		return nil, fmt.Errorf("failed to save profile: %w", err)
+	}
+
+	return r.fetchCreatorProfile(ctx, "tenant_id = $1 AND user_id = $2", tenantID, userID)
+}
+
+// CreateCreatorService adds a priced package to the caller's profile
+func (r *mutationResolver) CreateCreatorService(ctx context.Context, input model.CreateServiceInput) (*model.CreatorService, error) {
+	tenantID := appMiddleware.GetTenantID(ctx)
+	userID := appMiddleware.GetUserID(ctx)
+	if tenantID == "" || userID == "" {
+		return nil, fmt.Errorf("unauthorized")
+	}
+
+	var profileID string
+	err := r.DB.QueryRow(ctx, `
+        SELECT id FROM creator_profiles
+        WHERE tenant_id = $1 AND user_id = $2
+    `, tenantID, userID).Scan(&profileID)
+	if err != nil {
+		return nil, fmt.Errorf("create your creator profile first")
+	}
+
+	row := r.DB.QueryRow(ctx, `
+        INSERT INTO creator_services (profile_id, title, description, price, delivery_days, revisions)
+        VALUES ($1, $2, $3, $4, COALESCE($5, 7), COALESCE($6, 2))
+        RETURNING id, title, description, price, delivery_days, revisions, is_active
+    `, profileID, input.Title, input.Description, input.Price,
+		input.DeliveryDays, input.Revisions)
+
+	svc, err := scanCreatorService(row)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create service: %w", err)
+	}
+	return svc, nil
+}
+
+// GenerateStripeOnboardingLink creates the creator's Express account on
+// first call, then returns Stripe's hosted onboarding URL
+func (r *mutationResolver) GenerateStripeOnboardingLink(ctx context.Context) (*model.StripeOnboardingLink, error) {
+	tenantID := appMiddleware.GetTenantID(ctx)
+	userID := appMiddleware.GetUserID(ctx)
+	if tenantID == "" || userID == "" {
+		return nil, fmt.Errorf("unauthorized")
+	}
+
+	var profileID, accountID string
+	err := r.DB.QueryRow(ctx, `
+        SELECT id, COALESCE(stripe_account_id, '')
+        FROM creator_profiles
+        WHERE tenant_id = $1 AND user_id = $2
+    `, tenantID, userID).Scan(&profileID, &accountID)
+	if err != nil {
+		return nil, fmt.Errorf("create your creator profile first")
+	}
+
+	if accountID == "" {
+		email, _, err := r.userIdentity(ctx, userID)
+		if err != nil {
+			return nil, err
+		}
+		accountID, err = r.StripeConnect.CreateConnectedAccount(ctx, email)
+		if err != nil {
+			return nil, err
+		}
+		if _, err := r.DB.Exec(ctx,
+			"UPDATE creator_profiles SET stripe_account_id = $1 WHERE id = $2",
+			accountID, profileID,
+		); err != nil {
+			return nil, fmt.Errorf("failed to store Stripe account: %w", err)
+		}
+	}
+
+	url, err := r.StripeConnect.GenerateOnboardingLink(ctx, accountID, profileID)
+	if err != nil {
+		return nil, err
+	}
+	return &model.StripeOnboardingLink{URL: url}, nil
+}
+
+// AcceptBooking — the creator accepts a pending booking
+func (r *mutationResolver) AcceptBooking(ctx context.Context, id uuid.UUID) (*model.Booking, error) {
+	tenantID := appMiddleware.GetTenantID(ctx)
+	userID := appMiddleware.GetUserID(ctx)
+	if tenantID == "" || userID == "" {
+		return nil, fmt.Errorf("unauthorized")
+	}
+
+	if err := r.BookingService.AcceptBooking(ctx, tenantID, id.String(), userID); err != nil {
+		return nil, err
+	}
+	return r.fetchBooking(ctx, tenantID, id.String())
+}
+
+// DeclineBooking — the creator turns down a pending booking
+func (r *mutationResolver) DeclineBooking(ctx context.Context, id uuid.UUID) (*model.Booking, error) {
+	tenantID := appMiddleware.GetTenantID(ctx)
+	userID := appMiddleware.GetUserID(ctx)
+	if tenantID == "" || userID == "" {
+		return nil, fmt.Errorf("unauthorized")
+	}
+
+	if err := r.BookingService.DeclineBooking(ctx, tenantID, id.String(), userID); err != nil {
+		return nil, err
+	}
+	return r.fetchBooking(ctx, tenantID, id.String())
+}
+
+// DeliverBooking — the creator marks the work as delivered
+func (r *mutationResolver) DeliverBooking(ctx context.Context, id uuid.UUID) (*model.Booking, error) {
+	tenantID := appMiddleware.GetTenantID(ctx)
+	userID := appMiddleware.GetUserID(ctx)
+	if tenantID == "" || userID == "" {
+		return nil, fmt.Errorf("unauthorized")
+	}
+
+	if err := r.BookingService.DeliverBooking(ctx, tenantID, id.String(), userID); err != nil {
+		return nil, err
+	}
+	return r.fetchBooking(ctx, tenantID, id.String())
+}
+
+// CompleteBooking — the client approves delivery and releases the payout
+func (r *mutationResolver) CompleteBooking(ctx context.Context, id uuid.UUID) (*model.Booking, error) {
+	tenantID := appMiddleware.GetTenantID(ctx)
+	userID := appMiddleware.GetUserID(ctx)
+	if tenantID == "" || userID == "" {
+		return nil, fmt.Errorf("unauthorized")
+	}
+
+	email, _, err := r.userIdentity(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := r.BookingService.CompleteBooking(ctx, tenantID, id.String(), email); err != nil {
+		return nil, err
+	}
+	return r.fetchBooking(ctx, tenantID, id.String())
+}
+
+// SendBookingMessage posts a message in a booking conversation
+func (r *mutationResolver) SendBookingMessage(ctx context.Context, bookingID uuid.UUID, body string) (*model.BookingMessage, error) {
+	tenantID := appMiddleware.GetTenantID(ctx)
+	userID := appMiddleware.GetUserID(ctx)
+	if tenantID == "" || userID == "" {
+		return nil, fmt.Errorf("unauthorized")
+	}
+
+	var owned bool
+	if err := r.DB.QueryRow(ctx,
+		"SELECT EXISTS(SELECT 1 FROM bookings WHERE id = $1 AND tenant_id = $2)",
+		bookingID.String(), tenantID,
+	).Scan(&owned); err != nil {
+		return nil, fmt.Errorf("failed to verify booking: %w", err)
+	}
+	if !owned {
+		return nil, fmt.Errorf("booking not found")
+	}
+
+	email, name, err := r.userIdentity(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	var m model.BookingMessage
+	var msgID string
+	err = r.DB.QueryRow(ctx, `
+        INSERT INTO booking_messages (booking_id, sender_user_id, sender_email, sender_name, body)
+        VALUES ($1, $2, $3, $4, $5)
+        RETURNING id, created_at
+    `, bookingID.String(), userID, email, name, body).Scan(&msgID, &m.CreatedAt)
+	if err != nil {
+		return nil, fmt.Errorf("failed to send message: %w", err)
+	}
+
+	m.ID = parseUUID(msgID)
+	m.Body = body
+	m.SenderEmail = email
+	if name != "" {
+		m.SenderName = &name
+	}
+	return &m, nil
+}
+
+// CreateBooking — public storefront booking request. The tenant is derived
+// from the profile, and the price from the chosen service (never trusted
+// from the client when a service is selected).
+func (r *mutationResolver) CreateBooking(ctx context.Context, input model.CreateBookingInput) (*model.BookingPayment, error) {
+	var tenantID string
+	var isPublished bool
+	err := r.DB.QueryRow(ctx, `
+        SELECT tenant_id, is_published FROM creator_profiles WHERE id = $1
+    `, input.ProfileID.String()).Scan(&tenantID, &isPublished)
+	if err != nil {
+		return nil, fmt.Errorf("creator profile not found")
+	}
+	if !isPublished {
+		return nil, fmt.Errorf("creator profile is not accepting bookings")
+	}
+
+	agreedPrice := input.AgreedPrice
+	serviceID := ""
+	if input.ServiceID != nil {
+		serviceID = input.ServiceID.String()
+		err := r.DB.QueryRow(ctx, `
+            SELECT price FROM creator_services
+            WHERE id = $1 AND profile_id = $2 AND is_active = true
+        `, serviceID, input.ProfileID.String()).Scan(&agreedPrice)
+		if err != nil {
+			return nil, fmt.Errorf("service not found")
+		}
+	}
+	if agreedPrice <= 0 {
+		return nil, fmt.Errorf("invalid booking price")
+	}
+
+	in := services.CreateBookingInput{
+		TenantID:     tenantID,
+		ProfileID:    input.ProfileID.String(),
+		ServiceID:    serviceID,
+		ClientEmail:  input.ClientEmail,
+		Title:        input.Title,
+		Description:  input.Description,
+		DeliveryDate: input.DeliveryDate,
+		AgreedPrice:  agreedPrice,
+	}
+	if input.ClientName != nil {
+		in.ClientName = *input.ClientName
+	}
+	if input.Requirements != nil {
+		in.Requirements = *input.Requirements
+	}
+
+	result, err := r.BookingService.CreateBooking(ctx, in)
+	if err != nil {
+		return nil, err
+	}
+
+	payment := &model.BookingPayment{
+		BookingID:     parseUUID(result.BookingID),
+		AgreedPrice:   result.AgreedPrice,
+		PlatformFee:   result.PlatformFee,
+		CreatorPayout: result.CreatorPayout,
+	}
+	if result.ClientSecret != "" {
+		payment.ClientSecret = &result.ClientSecret
+	}
+	return payment, nil
 }
 
 // Me is the resolver for the me field.
@@ -386,11 +866,259 @@ func (r *queryResolver) EmailCampaigns(ctx context.Context) ([]*model.EmailCampa
 	return campaigns, nil
 }
 
+// Tickets lists the authenticated tenant's tickets for the inbox
+func (r *queryResolver) Tickets(ctx context.Context, status *string, priority *string, search *string) ([]*model.Ticket, error) {
+	tenantID := appMiddleware.GetTenantID(ctx)
+	if tenantID == "" {
+		return nil, fmt.Errorf("unauthorized")
+	}
+
+	opts := services.ListTicketsOptions{}
+	if status != nil {
+		opts.Status = *status
+	}
+	if priority != nil {
+		opts.Priority = *priority
+	}
+	if search != nil {
+		opts.Search = *search
+	}
+
+	tickets, err := r.TicketService.ListTickets(ctx, tenantID, opts)
+	if err != nil {
+		return nil, err
+	}
+
+	result := []*model.Ticket{}
+	for _, t := range tickets {
+		result = append(result, ticketToGraphQL(t))
+	}
+	return result, nil
+}
+
+// Ticket fetches a single tenant-owned ticket with its full message thread
+func (r *queryResolver) Ticket(ctx context.Context, id uuid.UUID) (*model.Ticket, error) {
+	tenantID := appMiddleware.GetTenantID(ctx)
+	if tenantID == "" {
+		return nil, fmt.Errorf("unauthorized")
+	}
+
+	t, err := r.TicketService.GetTicketWithMessages(ctx, tenantID, id.String())
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			// Unknown or foreign ticket — the schema allows a null ticket
+			return nil, nil
+		}
+		return nil, err
+	}
+	return ticketToGraphQL(t), nil
+}
+
+// CannedResponses lists the tenant's quick-reply templates
+func (r *queryResolver) CannedResponses(ctx context.Context) ([]*model.CannedResponse, error) {
+	tenantID := appMiddleware.GetTenantID(ctx)
+	if tenantID == "" {
+		return nil, fmt.Errorf("unauthorized")
+	}
+
+	rows, err := r.DB.Query(ctx, `
+        SELECT id, name, shortcut, body
+        FROM canned_responses
+        WHERE tenant_id = $1
+        ORDER BY name
+    `, tenantID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query canned responses: %w", err)
+	}
+	defer rows.Close()
+
+	result := []*model.CannedResponse{}
+	for rows.Next() {
+		var c model.CannedResponse
+		var id string
+		if err := rows.Scan(&id, &c.Name, &c.Shortcut, &c.Body); err != nil {
+			return nil, fmt.Errorf("failed to scan canned response: %w", err)
+		}
+		c.ID = parseUUID(id)
+		result = append(result, &c)
+	}
+	return result, nil
+}
+
+// SupportMetrics aggregates ticket KPIs for the metrics dashboard
+func (r *queryResolver) SupportMetrics(ctx context.Context) (*model.SupportMetrics, error) {
+	tenantID := appMiddleware.GetTenantID(ctx)
+	if tenantID == "" {
+		return nil, fmt.Errorf("unauthorized")
+	}
+
+	m := &model.SupportMetrics{
+		TicketsByDay:      []*model.TicketsByDay{},
+		TicketsByStatus:   []*model.TicketsByStatus{},
+		TicketsByPriority: []*model.TicketsByPriority{},
+	}
+
+	// Scalar KPIs in one pass. Breach rate counts SLA-tracked tickets whose
+	// first response came late — or hasn't come and the deadline has passed.
+	err := r.DB.QueryRow(ctx, `
+        SELECT
+            COUNT(*) FILTER (WHERE status = 'open'),
+            COALESCE(AVG(EXTRACT(EPOCH FROM (first_response_at - created_at)) / 3600.0)
+                     FILTER (WHERE first_response_at IS NOT NULL), 0),
+            COALESCE(AVG(EXTRACT(EPOCH FROM (resolved_at - created_at)) / 3600.0)
+                     FILTER (WHERE resolved_at IS NOT NULL), 0),
+            COALESCE(
+                COUNT(*) FILTER (WHERE sla_first_response_at IS NOT NULL AND (
+                    (first_response_at IS NOT NULL AND first_response_at > sla_first_response_at) OR
+                    (first_response_at IS NULL AND sla_first_response_at < NOW())
+                ))::float
+                / NULLIF(COUNT(*) FILTER (WHERE sla_first_response_at IS NOT NULL), 0),
+            0)
+        FROM tickets
+        WHERE tenant_id = $1
+    `, tenantID).Scan(
+		&m.OpenTickets, &m.AvgFirstResponseHours, &m.AvgResolutionHours, &m.SLABreachRate,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query support KPIs: %w", err)
+	}
+
+	// Last 7 days, zero-filled so the chart always shows a full week
+	dayRows, err := r.DB.Query(ctx, `
+        SELECT to_char(d.day, 'Dy') AS date, COUNT(t.id)
+        FROM generate_series(CURRENT_DATE - INTERVAL '6 days', CURRENT_DATE, '1 day') AS d(day)
+        LEFT JOIN tickets t
+            ON t.tenant_id = $1 AND t.created_at::date = d.day::date
+        GROUP BY d.day
+        ORDER BY d.day
+    `, tenantID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query tickets by day: %w", err)
+	}
+	defer dayRows.Close()
+	for dayRows.Next() {
+		var row model.TicketsByDay
+		if err := dayRows.Scan(&row.Date, &row.Count); err != nil {
+			return nil, fmt.Errorf("failed to scan tickets by day: %w", err)
+		}
+		m.TicketsByDay = append(m.TicketsByDay, &row)
+	}
+
+	statusRows, err := r.DB.Query(ctx, `
+        SELECT status, COUNT(*)
+        FROM tickets
+        WHERE tenant_id = $1
+        GROUP BY status
+        ORDER BY COUNT(*) DESC
+    `, tenantID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query tickets by status: %w", err)
+	}
+	defer statusRows.Close()
+	for statusRows.Next() {
+		var row model.TicketsByStatus
+		if err := statusRows.Scan(&row.Status, &row.Count); err != nil {
+			return nil, fmt.Errorf("failed to scan tickets by status: %w", err)
+		}
+		m.TicketsByStatus = append(m.TicketsByStatus, &row)
+	}
+
+	priorityRows, err := r.DB.Query(ctx, `
+        SELECT priority, COUNT(*)
+        FROM tickets
+        WHERE tenant_id = $1
+        GROUP BY priority
+        ORDER BY COUNT(*) DESC
+    `, tenantID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query tickets by priority: %w", err)
+	}
+	defer priorityRows.Close()
+	for priorityRows.Next() {
+		var row model.TicketsByPriority
+		if err := priorityRows.Scan(&row.Priority, &row.Count); err != nil {
+			return nil, fmt.Errorf("failed to scan tickets by priority: %w", err)
+		}
+		m.TicketsByPriority = append(m.TicketsByPriority, &row)
+	}
+
+	return m, nil
+}
+
+// MyCreatorProfile returns the authenticated user's creator profile
+func (r *queryResolver) MyCreatorProfile(ctx context.Context) (*model.CreatorProfile, error) {
+	tenantID := appMiddleware.GetTenantID(ctx)
+	userID := appMiddleware.GetUserID(ctx)
+	if tenantID == "" || userID == "" {
+		return nil, fmt.Errorf("unauthorized")
+	}
+
+	profile, err := r.fetchCreatorProfile(ctx, "tenant_id = $1 AND user_id = $2", tenantID, userID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			// No profile yet — the schema allows null
+			return nil, nil
+		}
+		return nil, err
+	}
+	return profile, nil
+}
+
+// CreatorProfile returns a published profile for the public storefront
+func (r *queryResolver) CreatorProfile(ctx context.Context, tenantID uuid.UUID, userID *uuid.UUID) (*model.CreatorProfile, error) {
+	var (
+		profile *model.CreatorProfile
+		err     error
+	)
+	if userID != nil {
+		profile, err = r.fetchCreatorProfile(ctx,
+			"tenant_id = $1 AND user_id = $2 AND is_published = true",
+			tenantID.String(), userID.String())
+	} else {
+		profile, err = r.fetchCreatorProfile(ctx,
+			`tenant_id = $1 AND is_published = true
+             ORDER BY created_at ASC LIMIT 1`,
+			tenantID.String())
+	}
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return profile, nil
+}
+
+// Booking returns a tenant-owned booking with its message thread
+func (r *queryResolver) Booking(ctx context.Context, id uuid.UUID) (*model.Booking, error) {
+	tenantID := appMiddleware.GetTenantID(ctx)
+	if tenantID == "" {
+		return nil, fmt.Errorf("unauthorized")
+	}
+
+	booking, err := r.fetchBooking(ctx, tenantID, id.String())
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return booking, nil
+}
+
+// Booking returns BookingResolver implementation.
+func (r *Resolver) Booking() BookingResolver { return &bookingResolver{r} }
+
+// CreatorProfile returns CreatorProfileResolver implementation.
+func (r *Resolver) CreatorProfile() CreatorProfileResolver { return &creatorProfileResolver{r} }
+
 // Mutation returns MutationResolver implementation.
 func (r *Resolver) Mutation() MutationResolver { return &mutationResolver{r} }
 
 // Query returns QueryResolver implementation.
 func (r *Resolver) Query() QueryResolver { return &queryResolver{r} }
 
+type bookingResolver struct{ *Resolver }
+type creatorProfileResolver struct{ *Resolver }
 type mutationResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }

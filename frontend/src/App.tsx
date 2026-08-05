@@ -5,6 +5,12 @@ import { ProductsPage } from "./pages/admin/Products";
 import { NewProductPage } from "./pages/admin/NewProduct";
 import { OrdersPage } from "./pages/admin/Orders";
 import { NotifyPage } from "./pages/admin/Notify";
+import { ReplyPage } from "./pages/admin/Reply";
+import { ReplyMetricsPage } from "./pages/admin/ReplyMetrics";
+import { TicketDetailPage } from "./pages/admin/TicketDetail";
+import { HireMePage } from "./pages/admin/HireMe";
+import { BookingConversationPage } from "./pages/admin/BookingConversation";
+import { CreatorProfilePage } from "./pages/store/CreatorProfile";
 import { StorefrontPage } from "./pages/store/Storefront";
 import { ProductDetailPage } from "./pages/store/ProductDetail";
 import { CartPage } from "./pages/store/Cart";
@@ -28,6 +34,20 @@ function App() {
       />
       <Route path="/admin/orders" element={<OrdersPage />} />
       <Route path="/admin/notify" element={<NotifyPage />} />
+      <Route path="/admin/reply" element={<ReplyPage />} />
+      {/* Static segment outranks :id in v7 route ranking */}
+      <Route path="/admin/reply/metrics" element={<ReplyMetricsPage />} />
+      <Route path="/admin/reply/:id" element={<TicketDetailPage />} />
+      <Route path="/admin/hire" element={<HireMePage />} />
+      {/* Stripe onboarding return/refresh URL — back to the dashboard */}
+      <Route
+        path="/admin/hire/onboarding"
+        element={<Navigate to="/admin/hire" replace />}
+      />
+      <Route
+        path="/admin/hire/bookings/:id"
+        element={<BookingConversationPage />}
+      />
 
       {/* Storefront (shoppers) */}
       <Route path="/store" element={<StorefrontPage />} />
@@ -35,6 +55,7 @@ function App() {
         path="/store/:subdomain/products/:slug"
         element={<ProductDetailPage />}
       />
+      <Route path="/store/:subdomain/hire" element={<CreatorProfilePage />} />
       <Route path="/cart" element={<CartPage />} />
       <Route path="/order/success" element={<OrderSuccessPage />} />
 

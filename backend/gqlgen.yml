@@ -165,6 +165,22 @@ autobind:
 # modelgen, the others will be allowed when binding to fields. Configure them to
 # your liking
 models:
+  # bookings takes a status argument and is owner-gated, so it must be
+  # resolved per-request instead of read from the struct
+  CreatorProfile:
+    fields:
+      bookings:
+        resolver: true
+  # Loaded on demand so they are correct whether the booking came from
+  # a single fetch or a list, instead of silently empty in list views
+  Booking:
+    fields:
+      messages:
+        resolver: true
+      service:
+        resolver: true
+      profile:
+        resolver: true
   ID:
     model:
       - github.com/99designs/gqlgen/graphql.ID
