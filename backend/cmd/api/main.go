@@ -67,8 +67,15 @@ func main() {
 		log.Printf("WARNING: Redis unavailable — order emails disabled: %v", err)
 	}
 	emailService := &services.EmailService{DB: db, Queue: queueClient}
+	manufacturingService := &services.ManufacturingService{DB: db}
+	pushService := &services.PushService{DB: db}
 	authHandler := &handlers.AuthHandler{DB: db, Email: emailService}
-	checkoutHandler := &handlers.CheckoutHandler{DB: db, Email: emailService}
+	checkoutHandler := &handlers.CheckoutHandler{
+		DB:            db,
+		Email:         emailService,
+		Manufacturing: manufacturingService,
+		Push:          pushService,
+	}
 	uploadHandler := &handlers.UploadHandler{Storage: storage.NewCloudinaryService()}
 
 	// Campaign scheduler — dispatches due campaigns every 60 seconds
@@ -138,6 +145,8 @@ func main() {
 				TicketService:  ticketService,
 				BookingService: bookingService,
 				StripeConnect:  stripeConnect,
+
+				ManufacturingService: manufacturingService,
 			},
 		}),
 	)

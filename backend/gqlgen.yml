@@ -181,6 +181,11 @@ models:
         resolver: true
       profile:
         resolver: true
+  # The order (with its items) is loaded per queue item on demand
+  ProductionQueueItem:
+    fields:
+      order:
+        resolver: true
   ID:
     model:
       - github.com/99designs/gqlgen/graphql.ID

@@ -349,6 +349,85 @@ func (r *mutationResolver) UpdateTicketStatus(ctx context.Context, ticketID uuid
 	return ticketToGraphQL(ticket), nil
 }
 
+// AdvanceProductionStatus moves a queue item to the next production stage,
+// recording the operator who did it
+func (r *mutationResolver) AdvanceProductionStatus(ctx context.Context, queueID uuid.UUID, status string, machineID *string) (*model.ProductionQueueItem, error) {
+	tenantID := appMiddleware.GetTenantID(ctx)
+	userID := appMiddleware.GetUserID(ctx)
+	if tenantID == "" || userID == "" {
+		return nil, fmt.Errorf("unauthorized")
+	}
+
+	machine := ""
+	if machineID != nil {
+		machine = *machineID
+	}
+
+	if err := r.ManufacturingService.AdvanceStatus(ctx, tenantID, queueID.String(), status, machine, userID); err != nil {
+		return nil, err
+	}
+
+	return r.fetchProductionQueueItem(ctx, tenantID, queueID.String())
+}
+
+// SimulateProduction advances every in-flight item one stage, staggered,
+// so the pipeline visibly moves in a demo
+func (r *mutationResolver) SimulateProduction(ctx context.Context) (*model.SimulateResult, error) {
+	tenantID := appMiddleware.GetTenantID(ctx)
+	if tenantID == "" {
+		return nil, fmt.Errorf("unauthorized")
+	}
+
+	if err := r.ManufacturingService.SimulateProduction(ctx, tenantID); err != nil {
+		return nil, err
+	}
+
+	return &model.SimulateResult{
+		Success: true,
+		Message: "Production simulation running — stages advance over the next few seconds",
+	}, nil
+}
+
+// RegisterDeviceToken stores the caller's Expo push token. Re-registering
+// the same token (reinstall, or a different user on the same device)
+// reassigns it and re-activates it.
+func (r *mutationResolver) RegisterDeviceToken(ctx context.Context, token string, platform string) (*model.DeviceToken, error) {
+	tenantID := appMiddleware.GetTenantID(ctx)
+	userID := appMiddleware.GetUserID(ctx)
+	if tenantID == "" || userID == "" {
+		return nil, fmt.Errorf("unauthorized")
+	}
+
+	if token == "" {
+		return nil, fmt.Errorf("token is required")
+	}
+	switch platform {
+	case "ios", "android", "web":
+	default:
+		return nil, fmt.Errorf("unsupported platform %q", platform)
+	}
+
+	var dt model.DeviceToken
+	var id string
+	err := r.DB.QueryRow(ctx, `
+        INSERT INTO device_tokens (user_id, tenant_id, token, platform)
+        VALUES ($1, $2, $3, $4)
+        ON CONFLICT (token) DO UPDATE SET
+            user_id    = EXCLUDED.user_id,
+            tenant_id  = EXCLUDED.tenant_id,
+            platform   = EXCLUDED.platform,
+            is_active  = true,
+            updated_at = NOW()
+        RETURNING id, platform, is_active
+    `, userID, tenantID, token, platform).Scan(&id, &dt.Platform, &dt.IsActive)
+	if err != nil {
+		return nil, fmt.Errorf("failed to register device token: %w", err)
+	}
+
+	dt.ID = parseUUID(id)
+	return &dt, nil
+}
+
 // UpdateCreatorProfile creates the caller's profile on first save and
 // updates provided fields afterwards (omitted fields keep their value)
 func (r *mutationResolver) UpdateCreatorProfile(ctx context.Context, input model.UpdateCreatorProfileInput) (*model.CreatorProfile, error) {
@@ -634,6 +713,34 @@ func (r *mutationResolver) CreateBooking(ctx context.Context, input model.Create
 		payment.ClientSecret = &result.ClientSecret
 	}
 	return payment, nil
+}
+
+// Order loads the order this production item was created from
+func (r *productionQueueItemResolver) Order(ctx context.Context, obj *model.ProductionQueueItem) (*model.Order, error) {
+	tenantID := appMiddleware.GetTenantID(ctx)
+	if tenantID == "" {
+		return nil, fmt.Errorf("unauthorized")
+	}
+
+	var orderID string
+	if err := r.DB.QueryRow(ctx,
+		"SELECT order_id FROM production_queue WHERE id = $1 AND tenant_id = $2",
+		obj.ID.String(), tenantID,
+	).Scan(&orderID); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	order, err := r.loadOrder(ctx, tenantID, orderID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return order, nil
 }
 
 // Me is the resolver for the me field.
@@ -1045,6 +1152,62 @@ func (r *queryResolver) SupportMetrics(ctx context.Context) (*model.SupportMetri
 	return m, nil
 }
 
+// ProductionQueue lists the tenant's production pipeline, highest
+// priority first, for the manufacturing kanban board
+func (r *queryResolver) ProductionQueue(ctx context.Context, status *string) ([]*model.ProductionQueueItem, error) {
+	tenantID := appMiddleware.GetTenantID(ctx)
+	if tenantID == "" {
+		return nil, fmt.Errorf("unauthorized")
+	}
+
+	query := "SELECT " + productionQueueColumns + `
+        FROM production_queue
+        WHERE tenant_id = $1`
+	args := []interface{}{tenantID}
+	if status != nil && *status != "" {
+		query += " AND status = $2"
+		args = append(args, *status)
+	}
+	query += " ORDER BY priority DESC, queued_at ASC"
+
+	rows, err := r.DB.Query(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query production queue: %w", err)
+	}
+	defer rows.Close()
+
+	result := []*model.ProductionQueueItem{}
+	for rows.Next() {
+		item, err := scanProductionQueueItem(rows)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, item)
+	}
+	return result, nil
+}
+
+// ProductionStats returns pipeline throughput metrics
+func (r *queryResolver) ProductionStats(ctx context.Context) (*model.ProductionStats, error) {
+	tenantID := appMiddleware.GetTenantID(ctx)
+	if tenantID == "" {
+		return nil, fmt.Errorf("unauthorized")
+	}
+
+	stats, err := r.ManufacturingService.GetProductionStats(ctx, tenantID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &model.ProductionStats{
+		TotalInProduction: int32(stats.TotalInProduction),
+		TotalShipped:      int32(stats.TotalShipped),
+		AvgTimeHours:      stats.AvgTimeHours,
+		TodayQueued:       int32(stats.TodayQueued),
+		TodayShipped:      int32(stats.TodayShipped),
+	}, nil
+}
+
 // MyCreatorProfile returns the authenticated user's creator profile
 func (r *queryResolver) MyCreatorProfile(ctx context.Context) (*model.CreatorProfile, error) {
 	tenantID := appMiddleware.GetTenantID(ctx)
@@ -1115,10 +1278,16 @@ func (r *Resolver) CreatorProfile() CreatorProfileResolver { return &creatorProf
 // Mutation returns MutationResolver implementation.
 func (r *Resolver) Mutation() MutationResolver { return &mutationResolver{r} }
 
+// ProductionQueueItem returns ProductionQueueItemResolver implementation.
+func (r *Resolver) ProductionQueueItem() ProductionQueueItemResolver {
+	return &productionQueueItemResolver{r}
+}
+
 // Query returns QueryResolver implementation.
 func (r *Resolver) Query() QueryResolver { return &queryResolver{r} }
 
 type bookingResolver struct{ *Resolver }
 type creatorProfileResolver struct{ *Resolver }
 type mutationResolver struct{ *Resolver }
+type productionQueueItemResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }

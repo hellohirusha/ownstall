@@ -135,6 +135,12 @@ type CreatorService struct {
 	IsActive     bool      `json:"isActive"`
 }
 
+type DeviceToken struct {
+	ID       uuid.UUID `json:"id"`
+	Platform string    `json:"platform"`
+	IsActive bool      `json:"isActive"`
+}
+
 type EmailCampaign struct {
 	ID             uuid.UUID  `json:"id"`
 	Name           string     `json:"name"`
@@ -238,6 +244,26 @@ type ProductVariant struct {
 	ImageURL      *string   `json:"imageUrl,omitempty"`
 }
 
+type ProductionQueueItem struct {
+	ID                    uuid.UUID  `json:"id"`
+	Status                string     `json:"status"`
+	Priority              int32      `json:"priority"`
+	MachineID             *string    `json:"machineId,omitempty"`
+	Notes                 *string    `json:"notes,omitempty"`
+	EstimatedCompletionAt *time.Time `json:"estimatedCompletionAt,omitempty"`
+	QueuedAt              time.Time  `json:"queuedAt"`
+	ShippedAt             *time.Time `json:"shippedAt,omitempty"`
+	Order                 *Order     `json:"order,omitempty"`
+}
+
+type ProductionStats struct {
+	TotalInProduction int32   `json:"totalInProduction"`
+	TotalShipped      int32   `json:"totalShipped"`
+	AvgTimeHours      float64 `json:"avgTimeHours"`
+	TodayQueued       int32   `json:"todayQueued"`
+	TodayShipped      int32   `json:"todayShipped"`
+}
+
 type Query struct {
 }
 
@@ -247,6 +273,11 @@ type Review struct {
 	Rating       int32     `json:"rating"`
 	Body         *string   `json:"body,omitempty"`
 	CreatedAt    time.Time `json:"createdAt"`
+}
+
+type SimulateResult struct {
+	Success bool   `json:"success"`
+	Message string `json:"message"`
 }
 
 type StripeOnboardingLink struct {

@@ -9,6 +9,7 @@ import { ReplyPage } from "./pages/admin/Reply";
 import { ReplyMetricsPage } from "./pages/admin/ReplyMetrics";
 import { TicketDetailPage } from "./pages/admin/TicketDetail";
 import { HireMePage } from "./pages/admin/HireMe";
+import { ManufacturingPage } from "./pages/admin/Manufacturing";
 import { BookingConversationPage } from "./pages/admin/BookingConversation";
 import { CreatorProfilePage } from "./pages/store/CreatorProfile";
 import { StorefrontPage } from "./pages/store/Storefront";
@@ -39,6 +40,7 @@ function App() {
       <Route path="/admin/reply/metrics" element={<ReplyMetricsPage />} />
       <Route path="/admin/reply/:id" element={<TicketDetailPage />} />
       <Route path="/admin/hire" element={<HireMePage />} />
+      <Route path="/admin/manufacturing" element={<ManufacturingPage />} />
       {/* Stripe onboarding return/refresh URL — back to the dashboard */}
       <Route
         path="/admin/hire/onboarding"

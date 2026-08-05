@@ -1,5 +1,5 @@
 import { Link, NavLink } from "react-router-dom";
-import { Briefcase, Mail, MessageSquare, Package, ReceiptText } from "lucide-react";
+import { Briefcase, Factory, Mail, MessageSquare, Package, ReceiptText } from "lucide-react";
 
 const linkClass = ({ isActive }: { isActive: boolean }) =>
   `flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
@@ -35,6 +35,10 @@ export function AdminNav() {
           <NavLink to="/admin/hire" className={linkClass}>
             <Briefcase size={16} />
             Hire Me
+          </NavLink>
+          <NavLink to="/admin/manufacturing" className={linkClass}>
+            <Factory size={16} />
+            Production
           </NavLink>
         </nav>
       </div>

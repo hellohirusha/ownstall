@@ -57,6 +57,10 @@ type Query {
   cannedResponses: [CannedResponse!]!
   supportMetrics: SupportMetrics!
 
+  # Manufacturing — auth required
+  productionQueue(status: String): [ProductionQueueItem!]!
+  productionStats: ProductionStats!
+
   # Hire Me
   # The authenticated user's own creator profile (null until created)
   myCreatorProfile: CreatorProfile
@@ -101,6 +105,14 @@ type Mutation {
   createTicket(input: CreateTicketInput!): Ticket!
   replyToTicket(ticketId: UUID!, body: String!, isInternal: Boolean!): TicketMessage!
   updateTicketStatus(ticketId: UUID!, status: String!): Ticket!
+
+  # Manufacturing — auth required
+  advanceProductionStatus(queueId: UUID!, status: String!, machineId: String): ProductionQueueItem!
+  simulateProduction: SimulateResult!
+
+  # Mobile — auth required
+  # Registers (or re-activates) an Expo push token for this device
+  registerDeviceToken(token: String!, platform: String!): DeviceToken!
 
   # Hire Me — auth required (creator side)
   # Creates the profile on first call, updates it afterwards
@@ -212,6 +224,42 @@ input CreateCampaignInput {
   name: String!
   subject: String!
   templateId: UUID!
+}
+
+# ─── MANUFACTURING TYPES ─────────────────────────────────────
+
+type ProductionQueueItem {
+  id: UUID!
+  # 'queued' | 'art_review' | 'printing' | 'cutting' |
+  # 'quality_check' | 'packaging' | 'shipped' | 'on_hold' | 'cancelled'
+  status: String!
+  priority: Int!
+  machineId: String
+  notes: String
+  estimatedCompletionAt: Time
+  queuedAt: Time!
+  shippedAt: Time
+  order: Order
+}
+
+type ProductionStats {
+  totalInProduction: Int!
+  totalShipped: Int!
+  avgTimeHours: Float!
+  todayQueued: Int!
+  todayShipped: Int!
+}
+
+type SimulateResult {
+  success: Boolean!
+  message: String!
+}
+
+type DeviceToken {
+  id: UUID!
+  # 'ios' | 'android' | 'web'
+  platform: String!
+  isActive: Boolean!
 }
 
 # ─── HIRE ME TYPES ───────────────────────────────────────────

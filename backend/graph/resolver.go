@@ -15,4 +15,6 @@ type Resolver struct {
 	TicketService  *services.TicketService
 	BookingService *services.BookingService
 	StripeConnect  *services.StripeConnectService
+
+	ManufacturingService *services.ManufacturingService
 }
