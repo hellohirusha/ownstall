@@ -197,6 +197,7 @@ Schema: [`backend/graph/schema.graphqls`](backend/graph/schema.graphqls)
   [the AI provider](docs/decisions/004-groq-as-ai-provider.md),
   [hosting](docs/decisions/005-railway-over-gcp.md)
 - [Observability](docs/observability.md) — logs, metrics, traces, error reporting
+- [Incident runbook](docs/runbooks/INCIDENTS.md) — one playbook per alert rule
 - [Grafana dashboard](docs/grafana-dashboard.json) — importable panel definitions
 
 ## Testing
