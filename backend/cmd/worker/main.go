@@ -8,12 +8,14 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/joho/godotenv"
 
 	"github.com/hellohirusha/ownstall/pkg/database"
 	"github.com/hellohirusha/ownstall/pkg/email"
 	"github.com/hellohirusha/ownstall/pkg/queue"
+	"github.com/hellohirusha/ownstall/pkg/telemetry"
 )
 
 func main() {
@@ -22,6 +24,37 @@ func main() {
 			log.Println("No .env file found — using system environment variables")
 		}
 	}
+
+	// The worker serves no HTTP, so there is nothing for Prometheus to
+	// scrape. Pushing over OTLP is the only way its metrics leave the
+	// process at all — the same reason the API pushes rather than
+	// waiting to be scraped on Railway.
+	if os.Getenv("SERVICE_NAME") == "" {
+		if err := os.Setenv("SERVICE_NAME", "ownstall-worker"); err != nil {
+			log.Printf("failed to set SERVICE_NAME: %v", err)
+		}
+	}
+
+	if err := telemetry.InitLogger(); err != nil {
+		log.Fatalf("Failed to initialise logger: %v", err)
+	}
+	defer telemetry.SyncLogger()
+
+	if err := telemetry.InitSentry(); err != nil {
+		telemetry.Log.Warn("Sentry init failed: " + err.Error())
+	}
+	defer telemetry.FlushSentry()
+
+	shutdownMetrics, err := telemetry.InitMetricsExport(context.Background())
+	if err != nil {
+		telemetry.Log.Warn("metrics export init failed: " + err.Error())
+		shutdownMetrics = func(context.Context) {}
+	}
+	defer func() {
+		flushCtx, cancelFlush := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancelFlush()
+		shutdownMetrics(flushCtx)
+	}()
 
 	// Connect to database
 	db, err := database.Connect(os.Getenv("DATABASE_URL"))
@@ -137,8 +170,11 @@ func main() {
 					log.Printf("failed to mark log %s failed: %v", payload.LogID, execErr)
 				}
 			}
+			telemetry.EmailsSentTotal.WithLabelValues("failed").Inc()
 			return fmt.Errorf("resend send failed: %w", err)
 		}
+
+		telemetry.EmailsSentTotal.WithLabelValues("sent").Inc()
 
 		// 6. Update log with Resend message ID and sent status
 		if payload.LogID != "" {

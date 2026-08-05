@@ -15,6 +15,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/hellohirusha/ownstall/pkg/telemetry"
 )
 
 type ManufacturingService struct {
@@ -127,6 +129,7 @@ func (s *ManufacturingService) AdvanceStatus(ctx context.Context,
 
 	// Log the event
 	s.logEvent(ctx, tenantID, queueID, currentStatus, newStatus, machineID, operatorID)
+	telemetry.ProductionOrdersTotal.WithLabelValues(newStatus).Inc()
 
 	// When order ships, update the orders table and notify customer
 	if newStatus == "shipped" {

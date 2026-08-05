@@ -24,6 +24,8 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/hellohirusha/ownstall/pkg/telemetry"
 )
 
 const (
@@ -202,6 +204,9 @@ func (c *Client) Complete(ctx context.Context, req Request) (string, error) {
 		c.requests.Add(1)
 	}
 	c.log(req, model, usage, cost, latency, err)
+	// ai_logs is the durable record; this is the same data in a form a
+	// dashboard can alert on without querying Postgres.
+	telemetry.ObserveAICall(req.Feature, err == nil, cost, latency)
 
 	if err != nil {
 		return "", err

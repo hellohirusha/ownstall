@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/hellohirusha/ownstall/pkg/telemetry"
 )
 
 type TicketService struct {
@@ -278,6 +280,8 @@ func (s *TicketService) CreateTicket(ctx context.Context, input CreateTicketInpu
 	if err := tx.Commit(ctx); err != nil {
 		return nil, err
 	}
+
+	telemetry.TicketsCreatedTotal.Inc()
 
 	return s.GetTicketWithMessages(ctx, input.TenantID, ticketID)
 }
