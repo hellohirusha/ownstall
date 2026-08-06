@@ -151,6 +151,14 @@ func main() {
 	manufacturingService := &services.ManufacturingService{DB: db}
 	pushService := &services.PushService{DB: db}
 	authHandler := &handlers.AuthHandler{DB: db, Email: emailService}
+	buyerAuthHandler := &handlers.BuyerAuthHandler{DB: db}
+	adminAuthHandler := &handlers.AdminAuthHandler{DB: db}
+
+	// Creates the first operator account from PLATFORM_ADMIN_* when the table
+	// is empty, so a fresh deployment has someone who can approve stalls.
+	if err := handlers.EnsureBootstrapAdmin(context.Background(), db); err != nil {
+		telemetry.Log.Warn("bootstrap platform admin: " + err.Error())
+	}
 	checkoutHandler := &handlers.CheckoutHandler{
 		DB:            db,
 		Email:         emailService,
@@ -200,15 +208,40 @@ func main() {
 	}()
 
 	r.Route("/api", func(r chi.Router) {
+		// Sellers
 		r.Post("/signup", authHandler.Signup)
 		r.Post("/login", authHandler.Login)
 		r.Post("/refresh", authHandler.Refresh)
 		r.Post("/logout", authHandler.Logout)
+
+		// Shoppers. Separate credentials and separate token scope: a buyer
+		// token must never open a seller dashboard.
+		r.Route("/buyer", func(r chi.Router) {
+			r.Post("/signup", buyerAuthHandler.Signup)
+			r.Post("/login", buyerAuthHandler.Login)
+			r.Post("/refresh", buyerAuthHandler.Refresh)
+			r.Post("/logout", buyerAuthHandler.Logout)
+			r.With(appMiddleware.BuyerRequired).Get("/me", buyerAuthHandler.Me)
+		})
+
+		// Platform operators. No signup route — operator accounts are
+		// created by another operator or by the bootstrap env vars.
+		r.Route("/admin", func(r chi.Router) {
+			r.Post("/login", adminAuthHandler.Login)
+			r.Post("/refresh", adminAuthHandler.Refresh)
+			r.Post("/logout", adminAuthHandler.Logout)
+		})
+
 		r.Group(func(r chi.Router) {
 			r.Use(appMiddleware.AuthRequired)
-			r.Post("/checkout/session", checkoutHandler.CreateCheckoutSession)
 			r.Post("/upload/product-image", uploadHandler.UploadProductImage)
 		})
+
+		// Checkout is public: a shopper buys from a stall without holding a
+		// seller session, and guests must be able to buy at all. The tenant
+		// is derived from the cart's variants, not from the caller's token.
+		r.With(appMiddleware.AuthOptional).
+			Post("/checkout/session", checkoutHandler.CreateCheckoutSession)
 		r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 			_, _ = w.Write([]byte(`{"message":"Ownstall API"}`))
 		})
