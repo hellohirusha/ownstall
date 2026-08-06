@@ -289,8 +289,23 @@ Stripe I/O, and only their security boundary is unit-tested. The handler
 tests deliberately run with a nil database — anything that reaches Postgres
 panics rather than passing quietly.
 
-Not yet covered: resolver-level integration tests against Postgres, load
-tests, and browser E2E. Those are tracked in the Status table above.
+Not yet covered by unit tests: resolver-level integration against Postgres.
+
+### End-to-end
+
+```bash
+cd frontend && npm run test:e2e
+```
+
+Playwright drives the real storefront against a running API. It covers the
+approval gate (an unapproved stall is neither listed nor able to take money),
+the browse → cart → checkout path, and cross-tenant order isolation.
+
+The specs stop at the redirect to Stripe's hosted page — going further means
+driving a third-party DOM, and the order only becomes `paid` once Stripe's
+webhook arrives. Seven of the nine specs need platform operator credentials
+and skip without them. Setup, and the reason product names in the specs lead
+with random characters, are in [frontend/e2e/README.md](frontend/e2e/README.md).
 
 ## Deployment
 
