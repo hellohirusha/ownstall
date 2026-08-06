@@ -13,6 +13,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { login } from "../lib/auth";
 import { useAuth } from "../lib/authContext";
+import { colors } from "../theme";
 
 export function LoginScreen() {
   const { setAuthenticated } = useAuth();
@@ -48,7 +49,7 @@ export function LoginScreen() {
           value={email}
           onChangeText={setEmail}
           placeholder="Email"
-          placeholderTextColor="#9ca3af"
+          placeholderTextColor={colors.ink[400]}
           autoCapitalize="none"
           keyboardType="email-address"
           style={styles.input}
@@ -57,7 +58,7 @@ export function LoginScreen() {
           value={password}
           onChangeText={setPassword}
           placeholder="Password"
-          placeholderTextColor="#9ca3af"
+          placeholderTextColor={colors.ink[400]}
           secureTextEntry
           style={styles.input}
         />
@@ -74,7 +75,7 @@ export function LoginScreen() {
           activeOpacity={0.85}
         >
           {loading ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={colors.white} />
           ) : (
             <Text style={styles.buttonText}>Sign in</Text>
           )}
@@ -89,29 +90,29 @@ export function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
+  container: { flex: 1, backgroundColor: colors.white },
   inner: { flex: 1, justifyContent: "center", paddingHorizontal: 24 },
-  brand: { fontSize: 32, fontWeight: "800", color: "#111827" },
-  subtitle: { fontSize: 15, color: "#6b7280", marginTop: 4, marginBottom: 28 },
+  brand: { fontSize: 32, fontWeight: "800", color: colors.ink[900] },
+  subtitle: { fontSize: 15, color: colors.ink[500], marginTop: 4, marginBottom: 28 },
   input: {
     borderWidth: 1,
-    borderColor: "#e5e7eb",
+    borderColor: colors.ink[200],
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 15,
-    color: "#111827",
+    color: colors.ink[900],
     marginBottom: 12,
   },
-  error: { color: "#ef4444", fontSize: 13, marginBottom: 8 },
+  error: { color: colors.danger.solid, fontSize: 13, marginBottom: 8 },
   button: {
-    backgroundColor: "#111827",
+    backgroundColor: colors.ink[900],
     borderRadius: 12,
     paddingVertical: 15,
     alignItems: "center",
     marginTop: 4,
   },
   buttonDisabled: { opacity: 0.5 },
-  buttonText: { color: "#fff", fontSize: 15, fontWeight: "600" },
-  hint: { fontSize: 12, color: "#9ca3af", textAlign: "center", marginTop: 16 },
+  buttonText: { color: colors.white, fontSize: 15, fontWeight: "600" },
+  hint: { fontSize: 12, color: colors.ink[400], textAlign: "center", marginTop: 16 },
 });

@@ -1,11 +1,14 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Input } from "../../components/ui/Input";
+import { saveSession } from "../../lib/session";
+import { TERMS_VERSION } from "../legal/legalContent";
 
 export function Signup() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [agreed, setAgreed] = useState(false);
 
   const [form, setForm] = useState({
     store_name: "",
@@ -31,6 +34,12 @@ export function Signup() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!agreed) {
+      setError("You must accept the seller terms to open a stall");
+      return;
+    }
+
     setLoading(true);
     setError("");
 
@@ -48,10 +57,28 @@ export function Signup() {
         return;
       }
 
-      // Store tokens
-      localStorage.setItem("access_token", data.access_token);
-      localStorage.setItem("refresh_token", data.refresh_token);
-      localStorage.setItem("user", JSON.stringify(data.user));
+      saveSession("tenant", data);
+
+      // Record the acceptance against the stall. The checkbox is the consent;
+      // this is the durable evidence of which version was agreed to.
+      try {
+        await fetch(`${process.env.REACT_APP_GRAPHQL_URL}`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${data.access_token}`,
+          },
+          body: JSON.stringify({
+            query: `mutation AcceptTerms($version: String!) {
+              acceptTerms(version: $version)
+            }`,
+            variables: { version: TERMS_VERSION },
+          }),
+        });
+      } catch {
+        // The stall exists either way; a failed audit write must not strand
+        // the seller on a form that already succeeded.
+      }
 
       navigate("/admin/products");
     } catch {
@@ -125,13 +152,42 @@ export function Signup() {
               required
             />
 
+            <label className="flex items-start gap-2.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={agreed}
+                onChange={(e) => setAgreed(e.target.checked)}
+                className="mt-0.5 w-4 h-4 rounded border-ink-300 text-brand-600
+                           focus:ring-brand-500 cursor-pointer"
+              />
+              <span className="text-xs text-ink-500 leading-relaxed">
+                I have read and agree to the{" "}
+                <Link
+                  to="/terms"
+                  target="_blank"
+                  className="text-brand-700 font-medium hover:underline"
+                >
+                  seller terms of service
+                </Link>{" "}
+                and the{" "}
+                <Link
+                  to="/privacy"
+                  target="_blank"
+                  className="text-brand-700 font-medium hover:underline"
+                >
+                  privacy policy
+                </Link>
+                . I understand my stall is reviewed before it goes public.
+              </span>
+            </label>
+
             <button
               type="submit"
-              disabled={loading}
-              className="w-full py-2.5 bg-brand-500 hover:bg-brand-600 text-white font-medium
+              disabled={loading || !agreed}
+              className="w-full py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-medium
                          rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? "Creating your store..." : "Create free store"}
+              {loading ? "Creating your stall..." : "Open my stall"}
             </button>
           </form>
 

@@ -118,7 +118,7 @@ export function BookingConversationPage() {
       <AdminNav />
       {loading ? (
         <div className="flex-1 flex items-center justify-center">
-          <div className="w-8 h-8 border-2 border-green-500 border-t-transparent rounded-full animate-spin" />
+          <div className="w-8 h-8 border-2 border-brand-600 border-t-transparent rounded-full animate-spin" />
         </div>
       ) : !booking ? (
         <div className="flex-1 flex items-center justify-center">
@@ -142,12 +142,12 @@ export function BookingConversationPage() {
                   <div key={step} className="flex items-center gap-1">
                     <div
                       className={`w-6 h-6 rounded-full flex items-center justify-center text-xs
-                        ${i <= currentStep ? "bg-green-500 text-white" : "bg-gray-100 text-gray-400"}`}
+                        ${i <= currentStep ? "bg-brand-600 text-white" : "bg-gray-100 text-gray-400"}`}
                     >
                       {i < currentStep ? <CheckCircle size={12} /> : i + 1}
                     </div>
                     {i < STATUS_STEPS.length - 2 && (
-                      <div className={`w-8 h-0.5 ${i < currentStep ? "bg-green-500" : "bg-gray-100"}`} />
+                      <div className={`w-8 h-0.5 ${i < currentStep ? "bg-brand-600" : "bg-gray-100"}`} />
                     )}
                   </div>
                 ))}
@@ -217,8 +217,8 @@ export function BookingConversationPage() {
                 </p>
                 <button
                   onClick={() => completeBooking({ variables: { id } })}
-                  className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white
-                             text-sm rounded-lg font-medium hover:bg-green-600"
+                  className="flex items-center gap-2 px-4 py-2 bg-brand-600 text-white
+                             text-sm rounded-lg font-medium hover:bg-brand-700"
                 >
                   <CheckCircle size={14} />
                   Approve & release payment (${booking.agreedPrice})
@@ -242,7 +242,7 @@ export function BookingConversationPage() {
                   placeholder="Send a message..."
                   rows={2}
                   className="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl text-sm
-                             focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"
+                             focus:outline-none focus:ring-2 focus:ring-brand-500 resize-none"
                 />
                 <button
                   onClick={() => {

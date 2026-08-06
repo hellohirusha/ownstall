@@ -7,53 +7,63 @@ import {
 } from "@apollo/client";
 import { setContext } from "@apollo/client/link/context";
 import { onError } from "@apollo/client/link/error";
+import { EMPTY, from as observableFrom } from "rxjs";
+import { mergeMap } from "rxjs/operators";
+
+import {
+  clearSession,
+  currentScope,
+  getAccessToken,
+  isSignedIn,
+  LOGIN_PATH,
+  refreshAccessToken,
+} from "./session";
 
 // ── HTTP Link — points to Go backend GraphQL endpoint ────────
 const httpLink = createHttpLink({
   uri: process.env.REACT_APP_GRAPHQL_URL || "http://localhost:8080/query",
 });
 
-// ── Auth Link — adds JWT to every request ────────────────────
+// ── Auth Link — attaches the token for whichever audience owns this page ──
+// Storefronts are browsed by guests, so a missing token is normal here and
+// the header is simply omitted rather than sent empty.
 const authLink = setContext((_, { headers }) => {
-  const token = localStorage.getItem("access_token");
+  const token = getAccessToken(currentScope());
+  if (!token) return { headers };
   return {
-    headers: {
-      ...headers,
-      authorization: token ? `Bearer ${token}` : "",
-    },
+    headers: { ...headers, authorization: `Bearer ${token}` },
   };
 });
 
-// ── Error Link — auto-refresh token on 401 ───────────────────
+// ── Error Link — refresh the access token once, then retry ───────────────
+// Access tokens live 15 minutes, so an expired token mid-session is routine.
+// The retry has to be returned as an observable: returning `forward()` from
+// inside a promise callback resolves after the link chain has already given
+// up, which is why refresh never actually recovered a request before.
 const errorLink = onError(({ error, operation, forward }) => {
-  if (ServerError.is(error) && error.statusCode === 401) {
-    // Token expired — attempt refresh
-    const refreshToken = localStorage.getItem("refresh_token");
-    if (!refreshToken) {
-      // No refresh token — send to login
-      localStorage.clear();
-      window.location.href = "/login";
-      return;
-    }
+  if (!ServerError.is(error) || error.statusCode !== 401) return;
 
-    // Refresh the access token
-    fetch(`${process.env.REACT_APP_API_URL}/auth/refresh`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ refresh_token: refreshToken }),
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.access_token) {
-          localStorage.setItem("access_token", data.access_token);
-          // Retry the failed operation
-          return forward(operation);
-        } else {
-          localStorage.clear();
-          window.location.href = "/login";
-        }
-      });
-  }
+  const scope = currentScope();
+
+  // A guest hitting a protected field should see the error, not be bounced
+  // to a sign-in page they never asked for.
+  if (!isSignedIn(scope)) return;
+
+  return observableFrom(refreshAccessToken(scope)).pipe(
+    mergeMap((token) => {
+      if (!token) {
+        clearSession(scope);
+        window.location.href = LOGIN_PATH[scope];
+        return EMPTY;
+      }
+
+      operation.setContext(({ headers = {} }: { headers?: object }) => ({
+        headers: { ...headers, authorization: `Bearer ${token}` },
+      }));
+
+      return forward(operation);
+    }),
+  );
 });
 
 // ── Apollo Client ─────────────────────────────────────────────
@@ -63,6 +73,9 @@ export const apolloClient = new ApolloClient({
     typePolicies: {
       Product: {
         // Products are uniquely identified by id
+        keyFields: ["id"],
+      },
+      Store: {
         keyFields: ["id"],
       },
     },

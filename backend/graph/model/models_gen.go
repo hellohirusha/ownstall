@@ -71,11 +71,36 @@ type BookingPayment struct {
 	CreatorPayout float64   `json:"creatorPayout"`
 }
 
+type BuyerOrder struct {
+	ID             uuid.UUID         `json:"id"`
+	StoreName      string            `json:"storeName"`
+	StoreSubdomain string            `json:"storeSubdomain"`
+	Status         string            `json:"status"`
+	Total          float64           `json:"total"`
+	CustomerEmail  string            `json:"customerEmail"`
+	TrackingNumber *string           `json:"trackingNumber,omitempty"`
+	CreatedAt      time.Time         `json:"createdAt"`
+	Items          []*BuyerOrderItem `json:"items"`
+}
+
+type BuyerOrderItem struct {
+	ProductName  string  `json:"productName"`
+	VariantTitle *string `json:"variantTitle,omitempty"`
+	Quantity     int32   `json:"quantity"`
+	TotalPrice   float64 `json:"totalPrice"`
+	ImageURL     *string `json:"imageUrl,omitempty"`
+}
+
 type CannedResponse struct {
 	ID       uuid.UUID `json:"id"`
 	Name     string    `json:"name"`
 	Shortcut *string   `json:"shortcut,omitempty"`
 	Body     string    `json:"body"`
+}
+
+type CategoryCount struct {
+	Category string `json:"category"`
+	Count    int32  `json:"count"`
 }
 
 type CopyGenStats struct {
@@ -217,6 +242,14 @@ type IndexResult struct {
 	Count   int32 `json:"count"`
 }
 
+type ModerationEvent struct {
+	ID         uuid.UUID `json:"id"`
+	Action     string    `json:"action"`
+	Reason     *string   `json:"reason,omitempty"`
+	AdminEmail *string   `json:"adminEmail,omitempty"`
+	CreatedAt  time.Time `json:"createdAt"`
+}
+
 type Mutation struct {
 }
 
@@ -239,6 +272,19 @@ type OrderItem struct {
 	UnitPrice    float64   `json:"unitPrice"`
 	TotalPrice   float64   `json:"totalPrice"`
 	ImageURL     *string   `json:"imageUrl,omitempty"`
+}
+
+type PlatformStats struct {
+	TotalStores     int32   `json:"totalStores"`
+	PendingStores   int32   `json:"pendingStores"`
+	ApprovedStores  int32   `json:"approvedStores"`
+	SuspendedStores int32   `json:"suspendedStores"`
+	RejectedStores  int32   `json:"rejectedStores"`
+	TotalProducts   int32   `json:"totalProducts"`
+	TotalOrders     int32   `json:"totalOrders"`
+	PaidOrders      int32   `json:"paidOrders"`
+	GrossRevenue    float64 `json:"grossRevenue"`
+	TotalBuyers     int32   `json:"totalBuyers"`
 }
 
 type PortfolioItem struct {
@@ -349,6 +395,48 @@ type Review struct {
 type SimulateResult struct {
 	Success bool   `json:"success"`
 	Message string `json:"message"`
+}
+
+type Store struct {
+	ID                 uuid.UUID  `json:"id"`
+	Name               string     `json:"name"`
+	Subdomain          string     `json:"subdomain"`
+	Tagline            *string    `json:"tagline,omitempty"`
+	Description        *string    `json:"description,omitempty"`
+	Category           *string    `json:"category,omitempty"`
+	Location           *string    `json:"location,omitempty"`
+	LogoURL            *string    `json:"logoUrl,omitempty"`
+	Status             string     `json:"status"`
+	IsActive           bool       `json:"isActive"`
+	CanPublishProducts bool       `json:"canPublishProducts"`
+	CanAcceptOrders    bool       `json:"canAcceptOrders"`
+	ProductCount       int32      `json:"productCount"`
+	CreatedAt          time.Time  `json:"createdAt"`
+	SubmittedAt        *time.Time `json:"submittedAt,omitempty"`
+	ReviewedAt         *time.Time `json:"reviewedAt,omitempty"`
+	ReviewNote         *string    `json:"reviewNote,omitempty"`
+}
+
+type StoreProfileInput struct {
+	Name        *string `json:"name,omitempty"`
+	Tagline     *string `json:"tagline,omitempty"`
+	Description *string `json:"description,omitempty"`
+	Category    *string `json:"category,omitempty"`
+	Location    *string `json:"location,omitempty"`
+	LogoURL     *string `json:"logoUrl,omitempty"`
+}
+
+type StoreSearchInput struct {
+	Search   *string `json:"search,omitempty"`
+	Category *string `json:"category,omitempty"`
+	Sort     *string `json:"sort,omitempty"`
+	Limit    *int32  `json:"limit,omitempty"`
+	Offset   *int32  `json:"offset,omitempty"`
+}
+
+type StoreSearchResult struct {
+	Stores []*Store `json:"stores"`
+	Total  int32    `json:"total"`
 }
 
 type StripeOnboardingLink struct {

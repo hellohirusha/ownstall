@@ -6,6 +6,7 @@ import { getUser, logout, AuthUser } from "../lib/auth";
 import { useAuth } from "../lib/authContext";
 import { API_URL } from "../lib/apollo";
 import { cacheClear } from "../lib/offline";
+import { colors } from "../theme";
 
 export function ProfileScreen() {
   const { setAuthenticated } = useAuth();
@@ -66,48 +67,48 @@ export function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f9fafb" },
+  container: { flex: 1, backgroundColor: colors.ink[50] },
   header: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12 },
-  title: { fontSize: 24, fontWeight: "700", color: "#111827" },
+  title: { fontSize: 24, fontWeight: "700", color: colors.ink[900] },
   card: {
     marginHorizontal: 20,
-    backgroundColor: "#fff",
+    backgroundColor: colors.white,
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: "#f3f4f6",
+    borderColor: colors.ink[100],
   },
   avatarRow: { flexDirection: "row", alignItems: "center" },
   avatar: {
     width: 52,
     height: 52,
     borderRadius: 26,
-    backgroundColor: "#111827",
+    backgroundColor: colors.ink[900],
     alignItems: "center",
     justifyContent: "center",
   },
-  avatarText: { color: "#fff", fontSize: 20, fontWeight: "700" },
+  avatarText: { color: colors.white, fontSize: 20, fontWeight: "700" },
   identity: { marginLeft: 14, flex: 1 },
-  email: { fontSize: 15, fontWeight: "600", color: "#111827" },
-  role: { fontSize: 13, color: "#6b7280", marginTop: 2, textTransform: "capitalize" },
-  divider: { height: 1, backgroundColor: "#f3f4f6", marginVertical: 14 },
+  email: { fontSize: 15, fontWeight: "600", color: colors.ink[900] },
+  role: { fontSize: 13, color: colors.ink[500], marginTop: 2, textTransform: "capitalize" },
+  divider: { height: 1, backgroundColor: colors.ink[100], marginVertical: 14 },
   row: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     paddingVertical: 6,
   },
-  rowLabel: { fontSize: 13, color: "#6b7280" },
-  rowValue: { fontSize: 13, color: "#111827", maxWidth: "65%" },
+  rowLabel: { fontSize: 13, color: colors.ink[500] },
+  rowValue: { fontSize: 13, color: colors.ink[900], maxWidth: "65%" },
   logout: {
     marginHorizontal: 20,
     marginTop: 20,
     borderWidth: 1,
-    borderColor: "#fecaca",
-    backgroundColor: "#fff",
+    borderColor: colors.danger.bg,
+    backgroundColor: colors.white,
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: "center",
   },
-  logoutText: { color: "#dc2626", fontSize: 15, fontWeight: "600" },
+  logoutText: { color: colors.danger.solid, fontSize: 15, fontWeight: "600" },
 });

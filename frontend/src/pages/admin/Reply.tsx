@@ -43,7 +43,7 @@ const PRIORITY_COLORS: Record<string, string> = {
 const SLA_ICONS: Record<string, ReactNode> = {
   breached: <AlertTriangle size={12} className="text-red-500" />,
   at_risk: <Clock size={12} className="text-orange-500" />,
-  ok: <CheckCircle size={12} className="text-green-500" />,
+  ok: <CheckCircle size={12} className="text-brand-600" />,
 };
 
 export function ReplyPage() {
@@ -83,7 +83,7 @@ export function ReplyPage() {
               <div className="flex items-center gap-2">
                 {openCount > 0 && (
                   <span
-                    className="text-xs bg-green-500 text-white font-medium
+                    className="text-xs bg-brand-600 text-white font-medium
                                px-2 py-0.5 rounded-full"
                   >
                     {openCount} open
@@ -110,7 +110,7 @@ export function ReplyPage() {
                 onKeyDown={(e) => e.key === "Enter" && setSearch(searchInput)}
                 placeholder="Search tickets..."
                 className="w-full pl-8 pr-3 py-2 bg-gray-50 border border-gray-100 rounded-lg
-                           text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                           text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
               />
             </div>
           </div>
@@ -164,7 +164,7 @@ export function ReplyPage() {
                     </div>
                     <div className="flex items-center gap-1.5">
                       {ticket.unreadCount > 0 && (
-                        <span className="w-2 h-2 bg-green-500 rounded-full flex-shrink-0" />
+                        <span className="w-2 h-2 bg-brand-600 rounded-full flex-shrink-0" />
                       )}
                       <span className="text-xs text-gray-400">
                         {formatTimeAgo(ticket.updatedAt)}

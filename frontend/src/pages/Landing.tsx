@@ -1,225 +1,295 @@
-import { Link } from "react-router-dom";
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import {
   ArrowRight,
-  Code,
+  BadgeCheck,
   CreditCard,
-  Database,
-  Layers,
-  Mail,
-  ShoppingBag,
+  Package,
+  Search,
+  ShieldCheck,
+  Sparkles,
   Store,
-  Zap,
+  Truck,
 } from "lucide-react";
 
-const DEMO_STORE_PATH = "/store?store=hirusha";
-const REPO_URL = "https://github.com/hellohirusha/ownstall";
-
-const FEATURES = [
+// What a shopper does here, in the order they do it.
+const BUYER_STEPS = [
   {
-    icon: Layers,
-    title: "Multi-tenant by design",
-    desc: "One deployment, many stores. Every tenant gets an isolated catalog, orders and email templates on shared infrastructure.",
+    icon: Search,
+    title: "Find a stall",
+    desc: "Search every approved stall on Ownstall by name, category or what they sell.",
   },
   {
-    icon: Store,
-    title: "Instant storefronts",
-    desc: "Sign up, add products, and a shareable storefront is live: product pages, variants, cart and checkout included.",
+    icon: Package,
+    title: "Pick your items",
+    desc: "Each stall keeps its own storefront, its own products and its own prices.",
   },
   {
     icon: CreditCard,
-    title: "Stripe Checkout",
-    desc: "Hosted payment pages with webhook-driven order updates: paid, expired and failed states handled server-side.",
-  },
-  {
-    icon: Zap,
-    title: "Redis job queue",
-    desc: "A custom queue with scheduled jobs, exponential-backoff retries and a dead-letter queue, consumed by a Go worker.",
-  },
-  {
-    icon: Mail,
-    title: "Transactional email",
-    desc: "Order confirmations rendered from per-tenant templates and delivered via Resend, with logging and suppression lists.",
-  },
-  {
-    icon: Database,
-    title: "Go + GraphQL + Postgres",
-    desc: "A Go API serving GraphQL and REST, backed by PostgreSQL with migrations, JWT auth and CI/CD to Railway and Vercel.",
+    title: "Check out",
+    desc: "Pay as a guest, or create an account to keep your order history in one place.",
   },
 ];
 
-const PIPELINE = [
-  { step: "1", label: "Customer pays", detail: "Stripe Checkout session" },
+// What a seller does here.
+const SELLER_STEPS = [
   {
-    step: "2",
-    label: "Webhook fires",
-    detail: "Order marked paid in Postgres",
+    icon: Store,
+    title: "Open your stall",
+    desc: "Claim a name, agree to the seller terms and your storefront is reserved.",
   },
-  { step: "3", label: "Job queued", detail: "Email job pushed to Redis" },
   {
-    step: "4",
-    label: "Email lands",
-    detail: "Worker renders + sends via Resend",
+    icon: Package,
+    title: "Add your products",
+    desc: "Photos, variants, stock and pricing — with AI-assisted product copy if you want it.",
+  },
+  {
+    icon: BadgeCheck,
+    title: "Get approved",
+    desc: "We review every stall before it goes public, so shoppers can trust what they find.",
+  },
+];
+
+const PROMISES = [
+  {
+    icon: ShieldCheck,
+    title: "Every stall is reviewed",
+    desc: "No stall appears in search until it has been approved. Stalls that break the rules get restricted or suspended.",
+  },
+  {
+    icon: CreditCard,
+    title: "Payments handled properly",
+    desc: "Checkout runs through Stripe. Card details never touch our servers, and sellers are paid out directly.",
+  },
+  {
+    icon: Truck,
+    title: "Order tracking built in",
+    desc: "Confirmation emails, status updates and production tracking come as standard for every stall.",
   },
 ];
 
 export function LandingPage() {
+  const navigate = useNavigate();
+  const [query, setQuery] = useState("");
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmed = query.trim();
+    navigate(trimmed ? `/stores?q=${encodeURIComponent(trimmed)}` : "/stores");
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="sticky top-0 z-10 bg-white/90 backdrop-blur border-b border-gray-100">
-        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-          <span className="text-xl font-bold text-gray-900">Ownstall</span>
-          <nav className="flex items-center gap-3">
-            <a
-              href={REPO_URL}
-              target="_blank"
-              rel="noreferrer"
-              className="hidden sm:flex items-center gap-1.5 px-3 py-2 text-sm font-medium
-                         text-gray-600 hover:text-gray-900 transition-colors"
-            >
-              <Code size={16} />
-              Source
-            </a>
-            <Link
-              to={DEMO_STORE_PATH}
-              className="px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors"
-            >
-              Demo store
-            </Link>
-            <Link
-              to="/signup"
-              className="px-4 py-2 bg-gray-900 hover:bg-gray-800 text-white text-sm
-                         font-medium rounded-lg transition-colors"
-            >
-              Create free store
-            </Link>
-          </nav>
-        </div>
-      </header>
-
-      <main>
-        {/* Hero */}
-        <section className="max-w-6xl mx-auto px-4 pt-20 pb-16 text-center">
+    <>
+      {/* Hero */}
+      <section className="bg-brand-gradient">
+        <div className="max-w-6xl mx-auto px-4 pt-20 pb-24 text-center">
           <span
-            className="inline-block mb-4 px-3 py-1 bg-green-100 text-green-700
-                       text-xs font-semibold rounded-full"
+            className="inline-flex items-center gap-1.5 mb-5 px-3 py-1 bg-white/15
+                       text-white text-xs font-semibold rounded-full backdrop-blur"
           >
-            Full-stack portfolio project
+            <Sparkles size={13} />
+            Independent sellers, one marketplace
           </span>
-          <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 tracking-tight mb-4">
-            Launch a store in minutes.
+
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white tracking-tight mb-5">
+            Every stall, one marketplace.
           </h1>
-          <p className="text-lg text-gray-500 max-w-2xl mx-auto mb-8">
-            Ownstall is a multi-tenant e-commerce platform built end-to-end
-            with Go, React, PostgreSQL, Redis and Stripe. From signup to
-            storefront to the order-confirmation email in your inbox.
+          <p className="text-lg text-brand-50/90 max-w-2xl mx-auto mb-8">
+            Ownstall gives independent sellers a storefront of their own — and
+            gives you one place to find all of them.
           </p>
-          <div className="flex flex-wrap items-center justify-center gap-3">
-            <Link
-              to={DEMO_STORE_PATH}
-              className="flex items-center gap-2 px-6 py-3 bg-gray-900 hover:bg-gray-800
-                         text-white font-medium rounded-xl transition-colors"
+
+          {/* Finding a stall is the primary action on this page, so the search
+              box is the hero rather than a sign-up form. */}
+          <form
+            onSubmit={handleSearch}
+            className="max-w-xl mx-auto flex flex-col sm:flex-row gap-2"
+          >
+            <div className="relative flex-1">
+              <Search
+                size={18}
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-ink-400 pointer-events-none"
+              />
+              <input
+                type="search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search stalls — ceramics, prints, coffee…"
+                aria-label="Search stalls"
+                className="w-full pl-11 pr-4 py-3.5 rounded-xl text-sm text-ink-900
+                           bg-white shadow-lift focus:outline-none focus:ring-2
+                           focus:ring-white/70"
+              />
+            </div>
+            <button
+              type="submit"
+              className="px-6 py-3.5 bg-ink-900 hover:bg-ink-800 text-white font-semibold
+                         rounded-xl transition-colors whitespace-nowrap"
             >
-              <ShoppingBag size={18} />
-              Visit the demo store
+              Browse stalls
+            </button>
+          </form>
+
+          <p className="mt-4 text-sm text-brand-50/80">
+            Or{" "}
+            <Link to="/signup" className="font-semibold text-white underline">
+              open your own stall
+            </Link>{" "}
+            — free to start.
+          </p>
+        </div>
+      </section>
+
+      {/* How it works */}
+      <section className="max-w-6xl mx-auto px-4 py-20">
+        <div className="grid gap-12 lg:grid-cols-2">
+          {/* Buyers */}
+          <div>
+            <h2 className="text-2xl font-bold text-ink-900 mb-1">
+              Buying on Ownstall
+            </h2>
+            <p className="text-sm text-ink-500 mb-8">
+              No account needed to start.
+            </p>
+            <ol className="space-y-6">
+              {BUYER_STEPS.map((step, i) => {
+                const Icon = step.icon;
+                return (
+                  <li key={step.title} className="flex gap-4">
+                    <div
+                      className="w-10 h-10 flex-shrink-0 bg-brand-50 text-brand-700
+                                 rounded-xl flex items-center justify-center"
+                    >
+                      <Icon size={19} />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-ink-900">
+                        <span className="text-ink-300 mr-1.5">{i + 1}.</span>
+                        {step.title}
+                      </h3>
+                      <p className="text-sm text-ink-500 mt-0.5">{step.desc}</p>
+                    </div>
+                  </li>
+                );
+              })}
+            </ol>
+            <Link
+              to="/stores"
+              className="inline-flex items-center gap-2 mt-8 px-5 py-2.5 bg-brand-600
+                         hover:bg-brand-700 text-white text-sm font-semibold rounded-lg
+                         transition-colors"
+            >
+              Browse stalls
+              <ArrowRight size={16} />
             </Link>
+          </div>
+
+          {/* Sellers */}
+          <div>
+            <h2 className="text-2xl font-bold text-ink-900 mb-1">
+              Selling on Ownstall
+            </h2>
+            <p className="text-sm text-ink-500 mb-8">
+              Your stall, your brand, your customers.
+            </p>
+            <ol className="space-y-6">
+              {SELLER_STEPS.map((step, i) => {
+                const Icon = step.icon;
+                return (
+                  <li key={step.title} className="flex gap-4">
+                    <div
+                      className="w-10 h-10 flex-shrink-0 bg-accent-100 text-accent-700
+                                 rounded-xl flex items-center justify-center"
+                    >
+                      <Icon size={19} />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-ink-900">
+                        <span className="text-ink-300 mr-1.5">{i + 1}.</span>
+                        {step.title}
+                      </h3>
+                      <p className="text-sm text-ink-500 mt-0.5">{step.desc}</p>
+                    </div>
+                  </li>
+                );
+              })}
+            </ol>
             <Link
               to="/signup"
-              className="flex items-center gap-2 px-6 py-3 bg-green-500 hover:bg-green-600
-                         text-white font-medium rounded-xl transition-colors"
+              className="inline-flex items-center gap-2 mt-8 px-5 py-2.5 bg-ink-900
+                         hover:bg-ink-800 text-white text-sm font-semibold rounded-lg
+                         transition-colors"
             >
-              Build your own
-              <ArrowRight size={18} />
+              Open your stall
+              <ArrowRight size={16} />
             </Link>
-            <a
-              href={REPO_URL}
-              target="_blank"
-              rel="noreferrer"
-              className="flex items-center gap-2 px-6 py-3 bg-white border border-gray-200
-                         hover:border-gray-400 text-gray-700 font-medium rounded-xl transition-colors"
-            >
-              <Code size={18} />
-              Read the code
-            </a>
           </div>
-        </section>
+        </div>
+      </section>
 
-        {/* Feature grid */}
-        <section className="max-w-6xl mx-auto px-4 pb-16">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {FEATURES.map((feature) => {
-              const Icon = feature.icon;
+      {/* Promises */}
+      <section className="bg-ink-50 border-y border-ink-200">
+        <div className="max-w-6xl mx-auto px-4 py-16">
+          <h2 className="text-2xl font-bold text-ink-900 text-center mb-2">
+            What you can count on
+          </h2>
+          <p className="text-sm text-ink-500 text-center mb-10 max-w-xl mx-auto">
+            A marketplace only works if both sides trust it.
+          </p>
+          <div className="grid gap-4 md:grid-cols-3">
+            {PROMISES.map((promise) => {
+              const Icon = promise.icon;
               return (
                 <div
-                  key={feature.title}
-                  className="bg-white rounded-2xl border border-gray-100 p-6"
+                  key={promise.title}
+                  className="bg-white rounded-2xl border border-ink-200 p-6 shadow-card"
                 >
                   <div
-                    className="w-10 h-10 bg-green-100 rounded-xl flex items-center
+                    className="w-10 h-10 bg-brand-50 rounded-xl flex items-center
                                justify-center mb-4"
                   >
-                    <Icon size={20} className="text-green-600" />
+                    <Icon size={20} className="text-brand-700" />
                   </div>
-                  <h3 className="font-semibold text-gray-900 mb-1">
-                    {feature.title}
+                  <h3 className="font-semibold text-ink-900 mb-1">
+                    {promise.title}
                   </h3>
-                  <p className="text-sm text-gray-500">{feature.desc}</p>
+                  <p className="text-sm text-ink-500">{promise.desc}</p>
                 </div>
               );
             })}
           </div>
-        </section>
-
-        {/* Order pipeline */}
-        <section className="max-w-6xl mx-auto px-4 pb-20">
-          <div className="bg-white rounded-2xl border border-gray-100 p-8">
-            <h2 className="text-xl font-bold text-gray-900 mb-1 text-center">
-              What happens when someone buys
-            </h2>
-            <p className="text-sm text-gray-500 text-center mb-8">
-              The full order pipeline, running live in this deployment
-            </p>
-            <div className="grid grid-cols-1 sm:grid-cols-4 gap-6">
-              {PIPELINE.map((stage) => (
-                <div key={stage.step} className="text-center">
-                  <div
-                    className="w-8 h-8 mx-auto mb-3 bg-gray-900 text-white text-sm
-                               font-bold rounded-full flex items-center justify-center"
-                  >
-                    {stage.step}
-                  </div>
-                  <p className="font-medium text-gray-900 text-sm">
-                    {stage.label}
-                  </p>
-                  <p className="text-xs text-gray-400 mt-1">{stage.detail}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-      </main>
-
-      {/* Footer */}
-      <footer className="border-t border-gray-100 bg-white">
-        <div className="max-w-6xl mx-auto px-4 py-8 text-center">
-          <p className="text-sm text-gray-500">
-            Built by{" "}
-            <a
-              href={REPO_URL}
-              target="_blank"
-              rel="noreferrer"
-              className="font-medium text-gray-700 hover:underline"
-            >
-              Hirusha
-            </a>{" "}
-            as a portfolio project.
-          </p>
-          <p className="text-xs text-gray-400 mt-2">
-            Non-commercial demo. Stripe runs in test mode and no real payments
-            are processed.
-          </p>
         </div>
-      </footer>
-    </div>
+      </section>
+
+      {/* Closing CTA */}
+      <section className="max-w-6xl mx-auto px-4 py-20">
+        <div className="rounded-3xl bg-ink-900 px-6 py-14 text-center sm:px-14">
+          <h2 className="text-3xl font-bold text-white mb-3">
+            Ready to set up your stall?
+          </h2>
+          <p className="text-ink-300 max-w-lg mx-auto mb-8">
+            Claim your name, add your first products and submit for review. It
+            takes a few minutes and costs nothing to start.
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <Link
+              to="/signup"
+              className="flex items-center gap-2 px-6 py-3 bg-brand-500 hover:bg-brand-400
+                         text-ink-900 font-semibold rounded-xl transition-colors"
+            >
+              Open your stall
+              <ArrowRight size={18} />
+            </Link>
+            <Link
+              to="/about"
+              className="px-6 py-3 bg-white/10 hover:bg-white/20 text-white font-medium
+                         rounded-xl transition-colors backdrop-blur"
+            >
+              Learn about us
+            </Link>
+          </div>
+        </div>
+      </section>
+    </>
   );
 }

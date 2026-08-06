@@ -17,7 +17,7 @@ export function OrderSuccessPage() {
     <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
       <div className="text-center max-w-md">
         <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-          <CheckCircle className="h-10 w-10 text-green-500" />
+          <CheckCircle className="h-10 w-10 text-brand-600" />
         </div>
         <h1 className="text-3xl font-bold text-gray-900 mb-2">
           Order confirmed!

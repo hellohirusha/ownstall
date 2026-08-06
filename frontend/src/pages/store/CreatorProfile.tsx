@@ -85,7 +85,7 @@ export function CreatorProfilePage() {
   if (loading)
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-green-500 border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-2 border-brand-600 border-t-transparent rounded-full animate-spin" />
       </div>
     );
 
@@ -117,7 +117,7 @@ export function CreatorProfilePage() {
         <div className="bg-white rounded-2xl p-8 mb-6 shadow-sm">
           <div className="flex items-start gap-6">
             <div
-              className="w-20 h-20 rounded-2xl bg-gradient-to-br from-green-400 to-blue-500
+              className="w-20 h-20 rounded-2xl bg-gradient-to-br from-brand-400 to-blue-500
                          flex items-center justify-center text-3xl font-bold text-white flex-shrink-0"
             >
               {profile.displayName[0]}
@@ -130,7 +130,7 @@ export function CreatorProfilePage() {
                     className="flex items-center gap-1 text-xs text-green-600
                                bg-green-50 px-2.5 py-1 rounded-full font-medium"
                   >
-                    <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
+                    <span className="w-1.5 h-1.5 bg-brand-600 rounded-full animate-pulse" />
                     Available
                   </span>
                 )}
@@ -144,7 +144,7 @@ export function CreatorProfilePage() {
                   </span>
                 )}
                 <span className="flex items-center gap-1">
-                  <CheckCircle size={14} className="text-green-500" />
+                  <CheckCircle size={14} className="text-brand-600" />
                   {profile.completedBookings} projects completed
                 </span>
                 {profile.hourlyRate && (
@@ -187,7 +187,7 @@ export function CreatorProfilePage() {
                 className={`bg-white rounded-xl p-5 border-2 cursor-pointer transition-all
                   ${
                     selectedService?.id === svc.id
-                      ? "border-green-500 shadow-sm"
+                      ? "border-brand-600 shadow-sm"
                       : "border-gray-100 hover:border-gray-200"
                   }`}
               >
@@ -205,8 +205,8 @@ export function CreatorProfilePage() {
                   <div className="text-right ml-4">
                     <p className="text-xl font-bold text-gray-900">${svc.price}</p>
                     <button
-                      className="mt-2 px-4 py-1.5 bg-green-500 text-white text-xs
-                                 rounded-lg font-medium hover:bg-green-600"
+                      className="mt-2 px-4 py-1.5 bg-brand-600 text-white text-xs
+                                 rounded-lg font-medium hover:bg-brand-700"
                     >
                       Book
                     </button>
@@ -265,13 +265,13 @@ export function CreatorProfilePage() {
                       rows={3}
                       placeholder="Describe your project..."
                       className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm
-                                 focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"
+                                 focus:outline-none focus:ring-2 focus:ring-brand-500 resize-none"
                     />
                   </div>
                   <button
                     onClick={handleBook}
                     disabled={booking || !bookingForm.clientEmail || !bookingForm.description || !bookingForm.title}
-                    className="w-full py-3 bg-green-500 hover:bg-green-600 text-white
+                    className="w-full py-3 bg-brand-600 hover:bg-brand-700 text-white
                                font-semibold rounded-xl transition-colors disabled:opacity-50
                                flex items-center justify-center gap-2"
                   >
@@ -285,7 +285,7 @@ export function CreatorProfilePage() {
               </div>
             ) : bookingSuccess ? (
               <div className="bg-green-50 border border-green-200 rounded-xl p-5 text-center">
-                <CheckCircle className="mx-auto h-10 w-10 text-green-500 mb-2" />
+                <CheckCircle className="mx-auto h-10 w-10 text-brand-600 mb-2" />
                 <p className="font-semibold text-green-800">Booking request sent!</p>
                 <p className="text-sm text-green-600 mt-1">
                   {profile.displayName} will respond {profile.responseTime?.replace(/_/g, " ")}.

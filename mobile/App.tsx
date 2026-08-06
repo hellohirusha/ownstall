@@ -20,6 +20,7 @@ import { OrdersScreen } from "./src/screens/OrdersScreen";
 import { SupportScreen } from "./src/screens/SupportScreen";
 import { ProfileScreen } from "./src/screens/ProfileScreen";
 import { ProductDetailScreen } from "./src/screens/ProductDetailScreen";
+import { colors } from "./src/theme";
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -29,11 +30,11 @@ function MainTabs() {
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: "#22c55e",
-        tabBarInactiveTintColor: "#9ca3af",
+        tabBarActiveTintColor: colors.brand[600],
+        tabBarInactiveTintColor: colors.ink[400],
         tabBarStyle: {
           borderTopWidth: 1,
-          borderTopColor: "#f3f4f6",
+          borderTopColor: colors.ink[100],
           height: 84,
           paddingBottom: 24,
           paddingTop: 8,
@@ -128,7 +129,7 @@ export default function App() {
   if (loading) {
     return (
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-        <ActivityIndicator size="large" color="#22c55e" />
+        <ActivityIndicator size="large" color={colors.brand[600]} />
       </View>
     );
   }

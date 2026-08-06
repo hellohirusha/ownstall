@@ -18,6 +18,7 @@ import {
   getCachedOrders,
   getCachedProducts,
 } from "../lib/offline";
+import { colors } from "../theme";
 
 // The API's orders query takes no limit argument — trim client-side
 const GET_HOME_DATA = gql`
@@ -78,7 +79,7 @@ export function HomeScreen({ navigation }: any) {
     <SafeAreaView style={styles.container}>
       <ScrollView
         refreshControl={
-          <RefreshControl refreshing={loading} onRefresh={refetch} tintColor="#22c55e" />
+          <RefreshControl refreshing={loading} onRefresh={refetch} tintColor={colors.brand[600]} />
         }
         showsVerticalScrollIndicator={false}
       >
@@ -173,7 +174,7 @@ export function HomeScreen({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f9fafb" },
+  container: { flex: 1, backgroundColor: colors.ink[50] },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -182,76 +183,76 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 16,
   },
-  greeting: { fontSize: 14, color: "#9ca3af" },
-  title: { fontSize: 24, fontWeight: "700", color: "#111827", marginTop: 2 },
+  greeting: { fontSize: 14, color: colors.ink[400] },
+  title: { fontSize: 24, fontWeight: "700", color: colors.ink[900], marginTop: 2 },
   headerDot: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "#22c55e",
+    backgroundColor: colors.brand[600],
     opacity: 0.15,
   },
   offlineBanner: {
     marginHorizontal: 20,
     marginBottom: 16,
-    backgroundColor: "#fef3c7",
+    backgroundColor: colors.warning.bg,
     borderRadius: 10,
     paddingVertical: 8,
     paddingHorizontal: 12,
   },
-  offlineText: { fontSize: 12, color: "#92400e", fontWeight: "500" },
+  offlineText: { fontSize: 12, color: colors.warning.fg, fontWeight: "500" },
   section: { paddingHorizontal: 20, marginBottom: 24 },
-  sectionTitle: { fontSize: 16, fontWeight: "700", color: "#111827", marginBottom: 12 },
-  empty: { fontSize: 13, color: "#9ca3af" },
+  sectionTitle: { fontSize: 16, fontWeight: "700", color: colors.ink[900], marginBottom: 12 },
+  empty: { fontSize: 13, color: colors.ink[400] },
   orderCard: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    backgroundColor: "#fff",
+    backgroundColor: colors.white,
     borderRadius: 12,
     padding: 14,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: "#f3f4f6",
+    borderColor: colors.ink[100],
   },
   orderLeft: { flex: 1, paddingRight: 12 },
-  orderItem: { fontSize: 14, fontWeight: "500", color: "#111827" },
-  orderDate: { fontSize: 12, color: "#9ca3af", marginTop: 2 },
+  orderItem: { fontSize: 14, fontWeight: "500", color: colors.ink[900] },
+  orderDate: { fontSize: 12, color: colors.ink[400], marginTop: 2 },
   orderRight: { alignItems: "flex-end" },
-  orderTotal: { fontSize: 14, fontWeight: "700", color: "#111827" },
+  orderTotal: { fontSize: 14, fontWeight: "700", color: colors.ink[900] },
   statusBadge: {
     marginTop: 4,
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 100,
-    backgroundColor: "#f3f4f6",
+    backgroundColor: colors.ink[100],
   },
-  statusPaid: { backgroundColor: "#dcfce7" },
-  statusShipped: { backgroundColor: "#dbeafe" },
-  statusText: { fontSize: 11, fontWeight: "500", color: "#6b7280" },
+  statusPaid: { backgroundColor: colors.success.bg },
+  statusShipped: { backgroundColor: colors.info.bg },
+  statusText: { fontSize: 11, fontWeight: "500", color: colors.ink[500] },
   productsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
   productCard: {
     width: "47%",
-    backgroundColor: "#fff",
+    backgroundColor: colors.white,
     borderRadius: 16,
     overflow: "hidden",
     borderWidth: 1,
-    borderColor: "#f3f4f6",
+    borderColor: colors.ink[100],
   },
   productImageContainer: { aspectRatio: 1 },
   productImage: { width: "100%", height: "100%" },
-  productImagePlaceholder: { backgroundColor: "#f3f4f6" },
+  productImagePlaceholder: { backgroundColor: colors.ink[100] },
   productName: {
     fontSize: 13,
     fontWeight: "500",
-    color: "#111827",
+    color: colors.ink[900],
     paddingHorizontal: 10,
     paddingTop: 8,
   },
   productPrice: {
     fontSize: 13,
     fontWeight: "700",
-    color: "#22c55e",
+    color: colors.brand[600],
     paddingHorizontal: 10,
     paddingBottom: 10,
     paddingTop: 2,

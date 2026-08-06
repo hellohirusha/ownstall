@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { colors } from "../theme";
 
 const GET_PRODUCT = gql`
   query GetMobileProduct($id: ID!) {
@@ -49,7 +50,7 @@ export function ProductDetailScreen({ route, navigation }: any) {
   if (loading) {
     return (
       <SafeAreaView style={styles.center}>
-        <ActivityIndicator size="large" color="#22c55e" />
+        <ActivityIndicator size="large" color={colors.brand[600]} />
       </SafeAreaView>
     );
   }
@@ -119,7 +120,7 @@ export function ProductDetailScreen({ route, navigation }: any) {
                 <Text
                   style={[
                     styles.stock,
-                    { color: v.isInStock ? "#16a34a" : "#dc2626" },
+                    { color: v.isInStock ? colors.success.solid : colors.danger.solid },
                   ]}
                 >
                   {v.isInStock ? `${v.stockQuantity} in stock` : "Out of stock"}
@@ -135,42 +136,42 @@ export function ProductDetailScreen({ route, navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
+  container: { flex: 1, backgroundColor: colors.white },
   center: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#fff",
+    backgroundColor: colors.white,
     gap: 12,
   },
-  missing: { color: "#6b7280", fontSize: 15 },
+  missing: { color: colors.ink[500], fontSize: 15 },
   topBar: { paddingHorizontal: 20, paddingVertical: 12, alignItems: "flex-end" },
-  close: { fontSize: 15, color: "#22c55e", fontWeight: "600" },
-  hero: { width: "100%", height: 280, backgroundColor: "#f3f4f6" },
-  heroPlaceholder: { backgroundColor: "#f3f4f6" },
+  close: { fontSize: 15, color: colors.brand[600], fontWeight: "600" },
+  hero: { width: "100%", height: 280, backgroundColor: colors.ink[100] },
+  heroPlaceholder: { backgroundColor: colors.ink[100] },
   body: { padding: 20 },
-  name: { fontSize: 22, fontWeight: "700", color: "#111827" },
+  name: { fontSize: 22, fontWeight: "700", color: colors.ink[900] },
   priceRow: { flexDirection: "row", alignItems: "center", gap: 10, marginTop: 6 },
-  price: { fontSize: 20, fontWeight: "700", color: "#22c55e" },
+  price: { fontSize: 20, fontWeight: "700", color: colors.brand[600] },
   compare: {
     fontSize: 15,
-    color: "#9ca3af",
+    color: colors.ink[400],
     textDecorationLine: "line-through",
   },
-  shortDesc: { fontSize: 14, color: "#4b5563", marginTop: 12 },
-  description: { fontSize: 14, color: "#6b7280", marginTop: 8, lineHeight: 20 },
+  shortDesc: { fontSize: 14, color: colors.ink[600], marginTop: 12 },
+  description: { fontSize: 14, color: colors.ink[500], marginTop: 8, lineHeight: 20 },
   tags: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 14 },
   tag: {
-    backgroundColor: "#f3f4f6",
+    backgroundColor: colors.ink[100],
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 100,
   },
-  tagText: { fontSize: 12, color: "#4b5563" },
+  tagText: { fontSize: 12, color: colors.ink[600] },
   sectionTitle: {
     fontSize: 15,
     fontWeight: "700",
-    color: "#111827",
+    color: colors.ink[900],
     marginTop: 24,
     marginBottom: 10,
   },
@@ -178,13 +179,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    backgroundColor: "#f9fafb",
+    backgroundColor: colors.ink[50],
     borderRadius: 12,
     padding: 14,
     marginBottom: 8,
   },
   variantLeft: { flex: 1 },
-  variantTitle: { fontSize: 14, fontWeight: "500", color: "#111827" },
+  variantTitle: { fontSize: 14, fontWeight: "500", color: colors.ink[900] },
   stock: { fontSize: 12, marginTop: 2 },
-  variantPrice: { fontSize: 15, fontWeight: "700", color: "#111827" },
+  variantPrice: { fontSize: 15, fontWeight: "700", color: colors.ink[900] },
 });

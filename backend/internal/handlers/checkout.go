@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stripe/stripe-go/v76"
@@ -34,8 +35,12 @@ type CartItem struct {
 // CreateCheckoutSession creates a Stripe checkout session and returns the URL
 // POST /api/checkout/session
 func (h *CheckoutHandler) CreateCheckoutSession(w http.ResponseWriter, r *http.Request) {
-	tenantID := appMiddleware.GetTenantID(r.Context())
-	userID := appMiddleware.GetUserID(r.Context())
+	// The buyer is whoever is shopping — a signed-in shopper or a guest.
+	// Crucially the tenant is NOT taken from the caller's token: doing that
+	// meant only a signed-in seller could check out, and the order landed on
+	// whatever stall that seller happened to own. The stall being bought from
+	// is a property of the cart, so it is derived from the cart.
+	buyerID := appMiddleware.GetBuyerID(r.Context())
 
 	var req struct {
 		Items         []CartItem `json:"items"`
@@ -51,6 +56,17 @@ func (h *CheckoutHandler) CreateCheckoutSession(w http.ResponseWriter, r *http.R
 
 	if len(req.Items) == 0 {
 		http.Error(w, `{"error":"cart is empty"}`, http.StatusBadRequest)
+		return
+	}
+
+	if strings.TrimSpace(req.CustomerEmail) == "" {
+		http.Error(w, `{"error":"an email address is required"}`, http.StatusBadRequest)
+		return
+	}
+
+	tenantID, err := h.resolveCartTenant(r.Context(), req.Items)
+	if err != nil {
+		http.Error(w, fmt.Sprintf(`{"error":%q}`, err.Error()), http.StatusBadRequest)
 		return
 	}
 
@@ -121,13 +137,13 @@ func (h *CheckoutHandler) CreateCheckoutSession(w http.ResponseWriter, r *http.R
 		// We read these in the webhook handler
 		Metadata: map[string]string{
 			"tenant_id": tenantID,
-			"user_id":   userID,
+			"buyer_id":  buyerID,
 		},
 	}
 
 	// Create a pending order in our database BEFORE Stripe session
 	// This way we can match the webhook back to an order
-	orderID, err := h.createPendingOrder(r.Context(), tenantID, userID, req.CustomerEmail, req.Items)
+	orderID, err := h.createPendingOrder(r.Context(), tenantID, buyerID, req.CustomerEmail, req.Items)
 	if err != nil {
 		http.Error(w, `{"error":"failed to create order"}`, http.StatusInternalServerError)
 		return
@@ -157,12 +173,83 @@ func (h *CheckoutHandler) CreateCheckoutSession(w http.ResponseWriter, r *http.R
 	})
 }
 
+// resolveCartTenant works out which stall a cart belongs to, and refuses the
+// checkout if that stall is not open for business.
+//
+// A cart may only contain items from one stall: each order belongs to a single
+// tenant, and payment goes to a single seller. Mixing stalls is rejected here
+// rather than silently attributing the whole order to the first one.
+func (h *CheckoutHandler) resolveCartTenant(ctx context.Context, items []CartItem) (string, error) {
+	variantIDs := make([]string, 0, len(items))
+	for _, item := range items {
+		if item.Quantity <= 0 {
+			return "", fmt.Errorf("quantity must be at least 1")
+		}
+		variantIDs = append(variantIDs, item.VariantID)
+	}
+
+	rows, err := h.DB.Query(ctx, `
+        SELECT DISTINCT p.tenant_id
+        FROM product_variants v
+        JOIN products p ON p.id = v.product_id
+        WHERE v.id = ANY($1::uuid[])
+    `, variantIDs)
+	if err != nil {
+		return "", fmt.Errorf("could not look up cart items")
+	}
+	defer rows.Close()
+
+	var tenantIDs []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return "", fmt.Errorf("could not look up cart items")
+		}
+		tenantIDs = append(tenantIDs, id)
+	}
+	if err := rows.Err(); err != nil {
+		return "", fmt.Errorf("could not look up cart items")
+	}
+
+	switch len(tenantIDs) {
+	case 0:
+		return "", fmt.Errorf("none of the items in your cart are available")
+	case 1:
+		// ok
+	default:
+		return "", fmt.Errorf("your cart mixes items from different stalls — please check out one stall at a time")
+	}
+
+	tenantID := tenantIDs[0]
+
+	var status string
+	var isActive, canAcceptOrders bool
+	err = h.DB.QueryRow(ctx,
+		`SELECT status, is_active, can_accept_orders FROM tenants WHERE id = $1`,
+		tenantID,
+	).Scan(&status, &isActive, &canAcceptOrders)
+	if err != nil {
+		return "", fmt.Errorf("this stall is not available")
+	}
+
+	// An unapproved or suspended stall must not be able to take money, even
+	// if someone kept a direct link to one of its products.
+	if status != "approved" || !isActive || !canAcceptOrders {
+		return "", fmt.Errorf("this stall is not currently accepting orders")
+	}
+
+	return tenantID, nil
+}
+
 // createPendingOrder creates an order (status "pending") plus its order_items
 // in a single transaction and returns the new order ID. The real payment state
 // is set later by the Stripe webhook.
+//
+// buyerID is empty for a guest checkout, in which case the order is identified
+// by customer_email alone.
 func (h *CheckoutHandler) createPendingOrder(
 	ctx context.Context,
-	tenantID, userID, customerEmail string,
+	tenantID, buyerID, customerEmail string,
 	items []CartItem,
 ) (string, error) {
 	tx, err := h.DB.Begin(ctx)
@@ -179,18 +266,20 @@ func (h *CheckoutHandler) createPendingOrder(
 		return "", fmt.Errorf("failed to set tenant context: %w", err)
 	}
 
-	// user_id is optional (guest checkout) — store NULL when absent
-	var userIDArg interface{}
-	if userID != "" {
-		userIDArg = userID
+	// buyer_id is optional (guest checkout) — store NULL when absent.
+	// user_id stays NULL: that column references the seller-side `users`
+	// table, and a shopper is never a row in it.
+	var buyerIDArg interface{}
+	if buyerID != "" {
+		buyerIDArg = buyerID
 	}
 
 	var orderID string
 	err = tx.QueryRow(ctx, `
-        INSERT INTO orders (tenant_id, user_id, customer_email, status, subtotal, total)
+        INSERT INTO orders (tenant_id, buyer_id, customer_email, status, subtotal, total)
         VALUES ($1, $2, $3, 'pending', 0, 0)
         RETURNING id
-    `, tenantID, userIDArg, customerEmail).Scan(&orderID)
+    `, tenantID, buyerIDArg, customerEmail).Scan(&orderID)
 	if err != nil {
 		return "", fmt.Errorf("failed to insert order: %w", err)
 	}

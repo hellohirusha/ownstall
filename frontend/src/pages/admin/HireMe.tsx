@@ -229,7 +229,7 @@ export function HireMePage() {
             {profile && !profile.isPublished && (
               <button
                 onClick={() => updateProfile({ variables: { input: { isPublished: true } } })}
-                className="px-4 py-2 bg-green-500 text-white text-sm font-medium rounded-lg"
+                className="px-4 py-2 bg-brand-600 text-white text-sm font-medium rounded-lg"
               >
                 Publish profile
               </button>
@@ -309,7 +309,7 @@ export function HireMePage() {
                     onChange={(e) => setProfileForm((p) => ({ ...p, bio: e.target.value }))}
                     rows={4}
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm
-                               focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"
+                               focus:outline-none focus:ring-2 focus:ring-brand-500 resize-none"
                   />
                 </div>
                 <Input
@@ -354,7 +354,7 @@ export function HireMePage() {
                       },
                     })
                   }
-                  className="w-full py-2.5 bg-green-500 text-white rounded-lg font-medium text-sm"
+                  className="w-full py-2.5 bg-brand-600 text-white rounded-lg font-medium text-sm"
                 >
                   Save changes
                 </button>
@@ -363,7 +363,7 @@ export function HireMePage() {
               <div className="space-y-3">
                 <div className="flex items-center gap-3">
                   <div
-                    className="w-16 h-16 bg-gradient-to-br from-green-400 to-blue-500
+                    className="w-16 h-16 bg-gradient-to-br from-brand-400 to-blue-500
                                rounded-full flex items-center justify-center text-2xl font-bold text-white"
                   >
                     {(profile?.displayName ?? "?")[0]}
@@ -459,7 +459,7 @@ export function HireMePage() {
                   <button
                     onClick={handleCreateService}
                     disabled={creatingService || !serviceForm.title.trim() || !serviceForm.price}
-                    className="flex-1 py-2 bg-green-500 text-white rounded-lg text-sm font-medium
+                    className="flex-1 py-2 bg-brand-600 text-white rounded-lg text-sm font-medium
                                disabled:opacity-50"
                   >
                     {creatingService ? "Creating..." : "Create service"}
@@ -471,7 +471,7 @@ export function HireMePage() {
                 onClick={() => setShowNewService(true)}
                 className="w-full py-3 border-2 border-dashed border-gray-200 rounded-xl
                            flex items-center justify-center gap-2 text-sm text-gray-400
-                           hover:border-green-400 hover:text-green-500 transition-colors"
+                           hover:border-brand-400 hover:text-brand-600 transition-colors"
               >
                 <Plus size={16} />
                 Add service package
@@ -506,7 +506,7 @@ export function HireMePage() {
                   <div className="flex gap-2 mt-3">
                     <button
                       onClick={() => acceptBooking({ variables: { id: b.id } })}
-                      className="flex-1 py-2 bg-green-500 text-white text-sm rounded-lg font-medium"
+                      className="flex-1 py-2 bg-brand-600 text-white text-sm rounded-lg font-medium"
                     >
                       Accept
                     </button>
