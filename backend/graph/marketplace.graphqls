@@ -1,0 +1,154 @@
+# ─── MARKETPLACE ─────────────────────────────────────────────
+# The public directory of stalls, the seller's view of their own stall, and
+# the platform operator's moderation surface.
+#
+# `Store` is the marketplace-facing view of a tenant. `Tenant` stays as it was
+# for the existing storefront queries; Store carries the listing and moderation
+# fields those callers have no business seeing.
+
+type Store {
+  id: UUID!
+  name: String!
+  subdomain: String!
+  tagline: String
+  description: String
+  category: String
+  location: String
+  logoUrl: String
+
+  # pending | approved | rejected | suspended
+  status: String!
+  isActive: Boolean!
+
+  # Restrictions are a lighter tool than suspension — the stall stays listed
+  # but loses one capability.
+  canPublishProducts: Boolean!
+  canAcceptOrders: Boolean!
+
+  productCount: Int!
+
+  createdAt: Time!
+  submittedAt: Time
+  reviewedAt: Time
+  reviewNote: String
+}
+
+type CategoryCount {
+  category: String!
+  count: Int!
+}
+
+type StoreSearchResult {
+  stores: [Store!]!
+  # Total matching the filter, ignoring limit/offset — needed for paging
+  total: Int!
+}
+
+type PlatformStats {
+  totalStores: Int!
+  pendingStores: Int!
+  approvedStores: Int!
+  suspendedStores: Int!
+  rejectedStores: Int!
+  totalProducts: Int!
+  totalOrders: Int!
+  paidOrders: Int!
+  grossRevenue: Float!
+  totalBuyers: Int!
+}
+
+# A shopper's view of their own order. Deliberately narrower than the seller's
+# `Order`: a buyer has no business seeing internal notes or the tenant's
+# fulfilment fields.
+type BuyerOrder {
+  id: UUID!
+  storeName: String!
+  storeSubdomain: String!
+  status: String!
+  total: Float!
+  customerEmail: String!
+  trackingNumber: String
+  createdAt: Time!
+  items: [BuyerOrderItem!]!
+}
+
+type BuyerOrderItem {
+  productName: String!
+  variantTitle: String
+  quantity: Int!
+  totalPrice: Float!
+  imageUrl: String
+}
+
+type ModerationEvent {
+  id: UUID!
+  action: String!
+  reason: String
+  adminEmail: String
+  createdAt: Time!
+}
+
+input StoreSearchInput {
+  search: String
+  category: String
+  # newest | oldest | name | products
+  sort: String
+  limit: Int
+  offset: Int
+}
+
+input StoreProfileInput {
+  name: String
+  tagline: String
+  description: String
+  category: String
+  location: String
+  logoUrl: String
+}
+
+extend type Query {
+  # ─── Public ───────────────────────────────────────────────
+  # Only ever returns approved, active stalls.
+  stores(input: StoreSearchInput): StoreSearchResult!
+  storeCategories: [CategoryCount!]!
+  store(subdomain: String!): Store
+
+  # ─── Shopper ──────────────────────────────────────────────
+  # The signed-in buyer's own order history, across every stall
+  myOrders: [BuyerOrder!]!
+
+  # ─── Seller ───────────────────────────────────────────────
+  # The signed-in seller's own stall, including its review state
+  myStore: Store
+
+  # ─── Platform operator ────────────────────────────────────
+  platformStats: PlatformStats!
+  adminStores(
+    status: String
+    search: String
+    limit: Int
+    offset: Int
+  ): [Store!]!
+  storeModerationHistory(tenantId: UUID!): [ModerationEvent!]!
+}
+
+extend type Mutation {
+  # ─── Seller ───────────────────────────────────────────────
+  updateStoreProfile(input: StoreProfileInput!): Store!
+  # Moves a pending or rejected stall into the review queue
+  submitStoreForReview: Store!
+  # Records acceptance of a specific terms version
+  acceptTerms(version: String!): Boolean!
+
+  # ─── Platform operator ────────────────────────────────────
+  approveStore(tenantId: UUID!, note: String): Store!
+  rejectStore(tenantId: UUID!, reason: String!): Store!
+  suspendStore(tenantId: UUID!, reason: String!): Store!
+  restoreStore(tenantId: UUID!): Store!
+  setStoreRestrictions(
+    tenantId: UUID!
+    canPublishProducts: Boolean!
+    canAcceptOrders: Boolean!
+    reason: String
+  ): Store!
+}
