@@ -8,6 +8,7 @@ import {
   Package,
   ReceiptText,
   Sparkles,
+  Store,
 } from "lucide-react";
 import { Logo } from "./Logo";
 import { StoreStatusBanner } from "./StoreStatusBanner";
@@ -21,6 +22,7 @@ const linkClass = ({ isActive }: { isActive: boolean }) =>
   }`;
 
 const SECTIONS = [
+  { to: "/admin/stall", icon: Store, label: "Stall" },
   { to: "/admin/products", icon: Package, label: "Products" },
   { to: "/admin/orders", icon: ReceiptText, label: "Orders" },
   { to: "/admin/notify", icon: Mail, label: "Notify" },

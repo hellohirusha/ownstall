@@ -25,15 +25,21 @@ func (r *mutationResolver) UpdateStoreProfile(ctx context.Context, input model.S
 		return nil, err
 	}
 
-	// COALESCE leaves an omitted field untouched rather than nulling it.
+	// Three-way per field: NULL (omitted) leaves it untouched, an empty
+	// string clears it, anything else sets it. A plain COALESCE would give
+	// only the first two-thirds — a seller could never remove a tagline or
+	// swap out a logo once one had been set.
+	//
+	// The name is the exception: a stall must always have one, so an empty
+	// name is treated as "leave it alone" rather than "erase it".
 	_, err = r.DB.Exec(ctx, `
         UPDATE tenants SET
             name        = COALESCE(NULLIF($2, ''), name),
-            tagline     = COALESCE($3, tagline),
-            description = COALESCE($4, description),
-            category    = COALESCE($5, category),
-            location    = COALESCE($6, location),
-            logo_url    = COALESCE($7, logo_url)
+            tagline     = CASE WHEN $3::text IS NULL THEN tagline     WHEN $3 = '' THEN NULL ELSE $3 END,
+            description = CASE WHEN $4::text IS NULL THEN description WHEN $4 = '' THEN NULL ELSE $4 END,
+            category    = CASE WHEN $5::text IS NULL THEN category    WHEN $5 = '' THEN NULL ELSE $5 END,
+            location    = CASE WHEN $6::text IS NULL THEN location    WHEN $6 = '' THEN NULL ELSE $6 END,
+            logo_url    = CASE WHEN $7::text IS NULL THEN logo_url    WHEN $7 = '' THEN NULL ELSE $7 END
         WHERE id = $1
     `, tenantID, derefOr(input.Name, ""), input.Tagline, input.Description,
 		input.Category, input.Location, input.LogoURL)

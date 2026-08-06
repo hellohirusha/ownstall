@@ -14,6 +14,7 @@ import { AccountHome } from "./pages/account/AccountHome";
 import { PlatformLogin } from "./pages/platform/PlatformLogin";
 import { PlatformDashboard } from "./pages/platform/PlatformDashboard";
 import { StoreFinderPage } from "./pages/store/StoreFinder";
+import { StallProfilePage } from "./pages/admin/StallProfile";
 import { ProductsPage } from "./pages/admin/Products";
 import { NewProductPage } from "./pages/admin/NewProduct";
 import { OrdersPage } from "./pages/admin/Orders";
@@ -81,6 +82,7 @@ function App() {
           </RequireAuth>
         }
       >
+        <Route path="/admin/stall" element={<StallProfilePage />} />
         <Route path="/admin/products" element={<ProductsPage />} />
         <Route path="/admin/products/new" element={<NewProductPage />} />
         {/* No admin product-detail page yet — send stale links back to the list */}
