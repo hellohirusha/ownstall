@@ -3,13 +3,16 @@ import { ArrowLeft, Trash2, Minus, Plus, ShoppingBag, Loader2 } from "lucide-rea
 import { useState } from "react";
 import toast from "react-hot-toast";
 import { useCart } from "../../lib/cart";
+import { getAccessToken, getSessionUser } from "../../lib/session";
 
 export function CartPage() {
   const navigate = useNavigate();
   const { items, removeItem, updateQuantity, totalItems, totalPrice } =
     useCart();
   const [loading, setLoading] = useState(false);
-  const [email, setEmail] = useState("");
+  // A signed-in shopper should not have to retype the address we already have
+  const buyer = getSessionUser("buyer");
+  const [email, setEmail] = useState(buyer?.email ?? "");
 
   const handleCheckout = async () => {
     if (!email) {
@@ -21,14 +24,18 @@ export function CartPage() {
     setLoading(true);
 
     try {
-      const token = localStorage.getItem("access_token");
+      // Checkout is open to guests. When a shopper IS signed in we send their
+      // buyer token so the order is attached to their account — but never the
+      // seller token, which is what used to make the stall owner the only
+      // person who could complete a purchase.
+      const token = getAccessToken("buyer");
       const res = await fetch(
         `${process.env.REACT_APP_API_URL}/api/checkout/session`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${token ?? ""}`,
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
           body: JSON.stringify({
             items: items.map((i) => ({
@@ -176,6 +183,20 @@ export function CartPage() {
 
         {/* Email + Checkout */}
         <div className="bg-white rounded-2xl p-5">
+          {!buyer && (
+            <div className="mb-4 p-3 bg-ink-50 border border-ink-200 rounded-lg text-sm text-ink-600">
+              Checking out as a guest.{" "}
+              <Link
+                to="/account/login"
+                state={{ from: "/cart" }}
+                className="text-brand-700 font-medium hover:underline"
+              >
+                Sign in
+              </Link>{" "}
+              to keep this order in your history — or just carry on below.
+            </div>
+          )}
+
           <label className="text-sm font-medium text-gray-700 block mb-1">
             Email for order confirmation
           </label>
@@ -185,7 +206,7 @@ export function CartPage() {
             onChange={(e) => setEmail(e.target.value)}
             placeholder="you@example.com"
             className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm
-                       focus:outline-none focus:ring-2 focus:ring-green-500 mb-4"
+                       focus:outline-none focus:ring-2 focus:ring-brand-500 mb-4"
           />
 
           <button

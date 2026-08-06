@@ -845,11 +845,16 @@ func (r *queryResolver) Me(ctx context.Context) (*model.User, error) {
 func (r *queryResolver) Tenant(ctx context.Context, subdomain string) (*model.Tenant, error) {
 	var t model.Tenant
 	var id string
+	// A stall is only publicly reachable once it has been approved. The
+	// owner is exempt so they can preview their own stall while it waits in
+	// the review queue.
 	err := r.DB.QueryRow(ctx, `
         SELECT id, name, subdomain, plan, is_active, created_at
         FROM tenants
         WHERE subdomain = $1 AND is_active = true
-    `, subdomain).Scan(&id, &t.Name, &t.Subdomain, &t.Plan, &t.IsActive, &t.CreatedAt)
+          AND (status = 'approved' OR id::text = $2)
+    `, subdomain, appMiddleware.GetTenantID(ctx)).
+		Scan(&id, &t.Name, &t.Subdomain, &t.Plan, &t.IsActive, &t.CreatedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			// Unknown subdomain — the schema allows a null tenant
@@ -876,6 +881,17 @@ func (r *queryResolver) Products(ctx context.Context, tenantID *uuid.UUID, statu
 		// Never expose another tenant's drafts to public callers
 		if tenantID.String() != tenant {
 			statusFilter = "active"
+
+			// Nor expose any of an unapproved or suspended stall's catalogue:
+			// hiding the stall from search is pointless if its products are
+			// still readable by id.
+			public, err := r.storeIsPublic(ctx, tenantID.String())
+			if err != nil {
+				return nil, err
+			}
+			if !public {
+				return []*model.Product{}, nil
+			}
 		}
 		tenant = tenantID.String()
 	}
@@ -911,6 +927,18 @@ func (r *queryResolver) Product(ctx context.Context, id string) (*model.Product,
 
 // ProductBySlug fetches a product by URL slug for the public storefront
 func (r *queryResolver) ProductBySlug(ctx context.Context, tenantID uuid.UUID, slug string) (*model.Product, error) {
+	// Same gate as the list query — a direct product link must not be a way
+	// around a stall's review state.
+	if tenantID.String() != appMiddleware.GetTenantID(ctx) {
+		public, err := r.storeIsPublic(ctx, tenantID.String())
+		if err != nil {
+			return nil, err
+		}
+		if !public {
+			return nil, nil
+		}
+	}
+
 	p, err := r.ProductService.GetProductBySlug(ctx, tenantID.String(), slug)
 	if err != nil {
 		return nil, err
