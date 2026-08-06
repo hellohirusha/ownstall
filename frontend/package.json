@@ -27,6 +27,7 @@
     "react-router-dom": "^7.16.0",
     "react-scripts": "5.0.1",
     "recharts": "^3.10.1",
+    "rxjs": "^7.8.2",
     "typescript": "^4.9.5",
     "web-vitals": "^2.1.4",
     "zod": "^4.4.3",
@@ -44,6 +45,17 @@
       "react-app/jest"
     ]
   },
+  "jest": {
+    "transformIgnorePatterns": [
+      "[/\\\\]node_modules[/\\\\](?!(@apollo|rxjs|ts-invariant|zen-observable-ts|optimism|@wry|graphql)[/\\\\]).+\\.(js|mjs|jsx|ts|tsx)$",
+      "^.+\\.module\\.(css|sass|scss)$"
+    ],
+    "moduleNameMapper": {
+      "^react-router-dom$": "<rootDir>/node_modules/react-router-dom/dist/index.js",
+      "^react-router/dom$": "<rootDir>/node_modules/react-router/dist/development/dom-export.js",
+      "^react-router$": "<rootDir>/node_modules/react-router/dist/development/index.js"
+    }
+  },
   "browserslist": {
     "production": [
       ">0.2%",
@@ -57,6 +69,7 @@
     ]
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "autoprefixer": "^10.5.0",
     "postcss": "^8.5.15",
     "tailwindcss": "^3.4.19"
