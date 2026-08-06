@@ -125,7 +125,7 @@ export function TicketDetailPage() {
       <AdminNav />
       {loading ? (
         <div className="flex-1 flex items-center justify-center">
-          <div className="w-8 h-8 border-2 border-green-500 border-t-transparent rounded-full animate-spin" />
+          <div className="w-8 h-8 border-2 border-brand-600 border-t-transparent rounded-full animate-spin" />
         </div>
       ) : !ticket ? (
         <div className="flex-1 flex items-center justify-center">
@@ -172,7 +172,7 @@ export function TicketDetailPage() {
                     onClick={() =>
                       updateStatus({ variables: { ticketId: id, status: "resolved" } })
                     }
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-green-500 hover:bg-green-600
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-600 hover:bg-brand-700
                                text-white text-xs rounded-lg font-medium transition-colors"
                   >
                     <CheckCircle size={12} />

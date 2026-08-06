@@ -150,7 +150,7 @@ export function NotifyPage() {
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
                   placeholder="July newsletter"
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm
-                             focus:outline-none focus:ring-2 focus:ring-green-500"
+                             focus:outline-none focus:ring-2 focus:ring-brand-500"
                 />
               </div>
               <div>
@@ -164,7 +164,7 @@ export function NotifyPage() {
                   }
                   placeholder="News from {{.StoreName}}"
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm
-                             focus:outline-none focus:ring-2 focus:ring-green-500"
+                             focus:outline-none focus:ring-2 focus:ring-brand-500"
                 />
               </div>
               <div>
@@ -177,7 +177,7 @@ export function NotifyPage() {
                     setForm({ ...form, templateId: e.target.value })
                   }
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm
-                             bg-white focus:outline-none focus:ring-2 focus:ring-green-500"
+                             bg-white focus:outline-none focus:ring-2 focus:ring-brand-500"
                 >
                   <option value="">Select a template…</option>
                   {templates.map((t: any) => (
@@ -190,7 +190,7 @@ export function NotifyPage() {
               <button
                 type="submit"
                 disabled={creating}
-                className="mt-1 w-full py-2.5 bg-green-500 hover:bg-green-600 text-white
+                className="mt-1 w-full py-2.5 bg-brand-600 hover:bg-brand-700 text-white
                            font-medium rounded-lg transition-colors text-sm
                            disabled:opacity-50 disabled:cursor-not-allowed"
               >

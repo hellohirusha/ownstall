@@ -224,7 +224,7 @@ export function AIFeaturesPage() {
           >
             <DollarSign
               size={14}
-              className={circuitOpen ? "text-red-500" : "text-green-500"}
+              className={circuitOpen ? "text-red-500" : "text-brand-600"}
             />
             <div>
               <p className="text-xs font-semibold text-gray-900">
@@ -375,7 +375,7 @@ export function AIFeaturesPage() {
           <div className="flex items-center justify-between">
             <div>
               <h2 className="font-semibold text-gray-900 flex items-center gap-2">
-                <TrendingUp size={16} className="text-green-500" />
+                <TrendingUp size={16} className="text-brand-600" />
                 Product recommendations
               </h2>
               <p className="text-sm text-gray-500 mt-1">
@@ -385,7 +385,7 @@ export function AIFeaturesPage() {
             <button
               onClick={() => indexAll()}
               disabled={indexing}
-              className="flex items-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-600
+              className="flex items-center gap-2 px-4 py-2 bg-brand-600 hover:bg-brand-700
                          text-white text-sm rounded-lg font-medium disabled:opacity-50"
             >
               {indexing ? (

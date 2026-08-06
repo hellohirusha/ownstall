@@ -89,7 +89,7 @@ export function ProductsPage() {
         </div>
         <Link
           to="/admin/products/new"
-          className="flex items-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-600
+          className="flex items-center gap-2 px-4 py-2 bg-brand-600 hover:bg-brand-700
                      text-white font-medium rounded-lg transition-colors text-sm"
         >
           <Plus size={16} />
@@ -109,8 +109,8 @@ export function ProductsPage() {
           </p>
           <Link
             to="/admin/products/new"
-            className="px-5 py-2.5 bg-green-500 text-white rounded-lg font-medium
-                       hover:bg-green-600 transition-colors"
+            className="px-5 py-2.5 bg-brand-600 text-white rounded-lg font-medium
+                       hover:bg-brand-700 transition-colors"
           >
             Add your first product
           </Link>

@@ -154,7 +154,7 @@ export function NewProductPage() {
             </label>
             <textarea
               className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm
-                         focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"
+                         focus:outline-none focus:ring-2 focus:ring-brand-500 resize-none"
               rows={4}
               value={form.description}
               onChange={(e) =>
@@ -238,7 +238,7 @@ export function NewProductPage() {
               onClick={() => fileInputRef.current?.click()}
               disabled={uploadingImage}
               className="aspect-square rounded-lg border-2 border-dashed border-gray-200
-                         flex flex-col items-center justify-center gap-1 hover:border-green-400
+                         flex flex-col items-center justify-center gap-1 hover:border-brand-400
                          hover:bg-green-50 transition-colors disabled:opacity-50"
             >
               {uploadingImage ? (
@@ -303,7 +303,7 @@ export function NewProductPage() {
           <button
             type="submit"
             disabled={loading}
-            className="flex-1 py-2.5 bg-green-500 hover:bg-green-600 text-white font-medium
+            className="flex-1 py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-medium
                        rounded-lg transition-colors disabled:opacity-50 text-sm"
           >
             {loading ? "Creating..." : "Create product"}

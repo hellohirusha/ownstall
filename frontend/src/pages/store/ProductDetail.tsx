@@ -178,7 +178,7 @@ export function ProductDetailPage() {
                   key={i}
                   onClick={() => setSelectedImageIndex(i)}
                   className={`w-16 h-16 rounded-lg overflow-hidden border-2 transition-colors
-                    ${i === selectedImageIndex ? "border-green-500" : "border-transparent"}`}
+                    ${i === selectedImageIndex ? "border-brand-600" : "border-transparent"}`}
                 >
                   <img
                     src={img.url}
@@ -239,7 +239,7 @@ export function ProductDetailPage() {
                         px-4 py-2 rounded-lg border text-sm font-medium transition-all
                         ${
                           isSelected
-                            ? "border-green-500 bg-green-50 text-green-700"
+                            ? "border-brand-600 bg-brand-50 text-brand-700"
                             : inStock
                               ? "border-gray-200 hover:border-gray-300 text-gray-700"
                               : "border-gray-100 text-gray-300 cursor-not-allowed line-through"
@@ -276,7 +276,7 @@ export function ProductDetailPage() {
               flex items-center justify-center gap-2
               ${
                 added
-                  ? "bg-green-500 text-white"
+                  ? "bg-brand-600 text-white"
                   : selectedVariant?.isInStock
                     ? "bg-gray-900 hover:bg-gray-800 text-white"
                     : "bg-gray-100 text-gray-400 cursor-not-allowed"

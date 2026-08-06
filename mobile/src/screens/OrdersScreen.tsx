@@ -11,6 +11,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { cacheOrders, getCachedOrders } from "../lib/offline";
+import { colors } from "../theme";
 
 const GET_ORDERS = gql`
   query GetMobileOrders {
@@ -29,13 +30,13 @@ const GET_ORDERS = gql`
 `;
 
 const STATUS_STYLE: Record<string, { bg: string; fg: string }> = {
-  pending: { bg: "#f3f4f6", fg: "#6b7280" },
-  paid: { bg: "#dcfce7", fg: "#15803d" },
-  processing: { bg: "#fef9c3", fg: "#a16207" },
-  shipped: { bg: "#dbeafe", fg: "#1d4ed8" },
-  delivered: { bg: "#dcfce7", fg: "#15803d" },
-  cancelled: { bg: "#fee2e2", fg: "#b91c1c" },
-  refunded: { bg: "#fee2e2", fg: "#b91c1c" },
+  pending: { bg: colors.ink[100], fg: colors.ink[500] },
+  paid: { bg: colors.success.bg, fg: colors.success.fg },
+  processing: { bg: colors.warning.bg, fg: colors.warning.fg },
+  shipped: { bg: colors.info.bg, fg: colors.info.fg },
+  delivered: { bg: colors.success.bg, fg: colors.success.fg },
+  cancelled: { bg: colors.danger.bg, fg: colors.danger.fg },
+  refunded: { bg: colors.danger.bg, fg: colors.danger.fg },
 };
 
 export function OrdersScreen() {
@@ -73,7 +74,7 @@ export function OrdersScreen() {
         keyExtractor={(o) => o.id}
         contentContainerStyle={styles.list}
         refreshControl={
-          <RefreshControl refreshing={loading} onRefresh={refetch} tintColor="#22c55e" />
+          <RefreshControl refreshing={loading} onRefresh={refetch} tintColor={colors.brand[600]} />
         }
         ListEmptyComponent={
           loading ? null : <Text style={styles.empty}>No orders yet</Text>
@@ -116,7 +117,7 @@ export function OrdersScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f9fafb" },
+  container: { flex: 1, backgroundColor: colors.ink[50] },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -125,26 +126,26 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 12,
   },
-  title: { fontSize: 24, fontWeight: "700", color: "#111827" },
-  count: { fontSize: 14, color: "#9ca3af" },
+  title: { fontSize: 24, fontWeight: "700", color: colors.ink[900] },
+  count: { fontSize: 14, color: colors.ink[400] },
   offlineBanner: {
     marginHorizontal: 20,
     marginBottom: 12,
-    backgroundColor: "#fef3c7",
+    backgroundColor: colors.warning.bg,
     borderRadius: 10,
     paddingVertical: 8,
     paddingHorizontal: 12,
   },
-  offlineText: { fontSize: 12, color: "#92400e", fontWeight: "500" },
+  offlineText: { fontSize: 12, color: colors.warning.fg, fontWeight: "500" },
   list: { paddingHorizontal: 20, paddingBottom: 24 },
-  empty: { textAlign: "center", color: "#9ca3af", marginTop: 40, fontSize: 14 },
+  empty: { textAlign: "center", color: colors.ink[400], marginTop: 40, fontSize: 14 },
   card: {
-    backgroundColor: "#fff",
+    backgroundColor: colors.white,
     borderRadius: 14,
     padding: 14,
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: "#f3f4f6",
+    borderColor: colors.ink[100],
   },
   cardTop: {
     flexDirection: "row",
@@ -152,17 +153,17 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginBottom: 6,
   },
-  orderId: { fontSize: 12, color: "#9ca3af", fontWeight: "600" },
+  orderId: { fontSize: 12, color: colors.ink[400], fontWeight: "600" },
   badge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 100 },
   badgeText: { fontSize: 11, fontWeight: "600" },
-  customer: { fontSize: 14, fontWeight: "500", color: "#111827" },
-  items: { fontSize: 12, color: "#9ca3af", marginTop: 2 },
+  customer: { fontSize: 14, fontWeight: "500", color: colors.ink[900] },
+  items: { fontSize: 12, color: colors.ink[400], marginTop: 2 },
   cardBottom: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     marginTop: 10,
   },
-  date: { fontSize: 12, color: "#9ca3af" },
-  total: { fontSize: 15, fontWeight: "700", color: "#111827" },
+  date: { fontSize: 12, color: colors.ink[400] },
+  total: { fontSize: 15, fontWeight: "700", color: colors.ink[900] },
 });
