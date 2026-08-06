@@ -1,7 +1,33 @@
 # Ownstall
 
-> Multi-tenant commerce platform — every creator gets their own storefront under one roof.
+> A marketplace of independent stalls — every seller gets their own storefront,
+> and shoppers get one place to find all of them.
 > Built with Go, GraphQL, React, TypeScript, and Postgres.
+
+## How it works
+
+Ownstall has three kinds of user, and they are deliberately kept apart —
+separate credentials, separate token scopes, separate surfaces:
+
+| Role                | Signs in at       | Can do                                                                 |
+| ------------------- | ----------------- | ---------------------------------------------------------------------- |
+| **Seller** (tenant) | `/login`          | Open a stall, add products, manage orders, support, bookings            |
+| **Buyer**           | `/account/login`  | Browse every approved stall, buy as guest or signed in, see order history |
+| **Platform admin**  | `/platform/login` | Approve/reject stalls, suspend, restrict, view platform-wide stats      |
+
+The lifecycle of a stall:
+
+```
+seller signs up ──► pending ──► admin approves ──► listed in /stores, can take orders
+                       │                                    │
+                       └──► rejected (resubmit)             ├──► restricted (listed, capability removed)
+                                                            └──► suspended (delisted, no orders)
+```
+
+A stall is invisible to shoppers — not in search, no storefront, no checkout —
+until it is approved. Buyers never need an account: guest checkout is a
+first-class path, and a guest's past orders are claimed automatically if they
+later sign up with the same email.
 
 ## Status
 
@@ -18,6 +44,10 @@
 | Observability — logs, metrics, tracing, Sentry        | ✅     |
 | Security — rate limiting, security headers, audit log | ✅     |
 | Mobile (Expo) — 6 screens, push, offline cache        | ✅     |
+| Buyer accounts + guest checkout                       | ✅     |
+| Stall directory with search + filters                 | ✅     |
+| Platform admin — approval queue, suspend, restrict    | ✅     |
+| Terms acceptance + privacy policy                     | ✅     |
 | Load tests, E2E tests, store builds                   | ⏳     |
 
 **Live demo**
@@ -64,7 +94,9 @@ ownstall/
 │   ├── internal/       auth, handlers, middleware, models, services
 │   └── pkg/database/   Connection + SQL migrations (run on boot)
 ├── frontend/           React + TypeScript app (CRA)
-│   └── src/            pages (admin, store, auth), lib, hooks, components
+│   └── src/pages/      Landing, company (about/contact), legal (terms/privacy),
+│                       auth (seller), account (buyer), platform (operator),
+│                       admin (seller dashboard), store (finder + storefront)
 ├── mobile/             Expo app (screens, Apollo, push, offline cache)
 ├── scripts/            deploy / seed / test helpers
 ├── docs/               Architecture decisions, runbooks, observability
@@ -111,15 +143,34 @@ stripe listen --forward-to localhost:8080/webhooks/stripe
 
 macOS/Linux users: the same commands work in any shell; replace `Copy-Item` with `cp`.
 
-### Test the checkout flow
+### Walk the full marketplace flow
 
-1. `http://localhost:3000/signup` → create a store
-2. `/admin/products/new` → create a product
-3. `/store?store=<your-subdomain>` → open your storefront
-4. Product → **Add to cart** → `/cart` → checkout
-5. Pay with Stripe's test card `4242 4242 4242 4242` (any future expiry, any CVC)
-6. You land on `/order/success`; the webhook marks the order **paid**
-7. `/admin/orders` → the order appears with status `paid`
+Set `PLATFORM_ADMIN_EMAIL` and `PLATFORM_ADMIN_PASSWORD` in `backend/.env`
+before the first boot — the operator account is created only when the
+`platform_admins` table is empty.
+
+**As a seller**
+
+1. `http://localhost:3000/signup` → open a stall (the terms checkbox is required)
+2. `/admin/products/new` → add a product
+3. The dashboard shows an amber banner: the stall is **pending** and invisible
+
+**As the platform admin**
+
+4. `/platform/login` → sign in with the bootstrap credentials
+5. The **Pending review** tab lists the new stall → **Approve**
+
+**As a buyer**
+
+6. `/stores` → search for the stall; it appears now that it is approved
+7. Open it, add a product to the cart, go to `/cart`
+8. Check out as a **guest**, or sign in at `/account/login` first
+9. Pay with Stripe's test card `4242 4242 4242 4242` (any future expiry, any CVC)
+10. You land on `/order/success`; the webhook marks the order **paid**
+11. Signed-in buyers see it under `/account`; the seller sees it at `/admin/orders`
+
+**Back as the admin** — suspend the stall and confirm it vanishes from `/stores`
+and can no longer take orders.
 
 ## Environment variables
 
@@ -141,6 +192,7 @@ macOS/Linux users: the same commands work in any shell; replace `Copy-Item` with
 | `RATE_LIMIT_REQUESTS`, `RATE_LIMIT_WINDOW_SECONDS`                     | —            | Per-IP and per-tenant caps (default 300 per minute)                          |
 | `METRICS_TOKEN`                                                        | —            | Required to read `/metrics`; unset leaves the endpoint closed                |
 | `SENTRY_DSN`                                                           | —            | Error tracking (optional)                                                    |
+| `PLATFORM_ADMIN_EMAIL`, `PLATFORM_ADMIN_PASSWORD`, `PLATFORM_ADMIN_NAME` | —          | Creates the first operator account, and only while `platform_admins` is empty. Password must be 12+ chars. Never resets an existing operator |
 
 ### Frontend (`frontend/.env`)
 
@@ -159,10 +211,13 @@ macOS/Linux users: the same commands work in any shell; replace `Copy-Item` with
 | --------------------------------------------------- | ---------------- | ------------------------------------------------------------ |
 | `GET /health`                                       | —                | Liveness check                                               |
 | `GET /metrics`                                      | `X-Metrics-Token`| Prometheus exposition; closed unless `METRICS_TOKEN` is set  |
-| `POST /api/signup` / `login` / `refresh` / `logout` | —                | JWT auth                                                     |
+| `POST /api/signup` / `login` / `refresh` / `logout` | —                | Seller JWT auth                                              |
+| `POST /api/buyer/signup` / `login` / `refresh` / `logout` | —          | Buyer JWT auth (`buyer` scope)                               |
+| `GET /api/buyer/me`                                 | Buyer            | Signed-in shopper's profile                                  |
+| `POST /api/admin/login` / `refresh` / `logout`      | —                | Operator JWT auth (`admin` scope). No signup — accounts are provisioned |
 | `POST /query`                                       | Optional         | GraphQL (admin queries need `Authorization: Bearer <token>`) |
 | `GET /playground`                                   | —                | GraphQL playground (non-production only)                     |
-| `POST /api/checkout/session`                        | ✅               | Create Stripe Checkout session + pending order               |
+| `POST /api/checkout/session`                        | Optional         | Create Stripe Checkout session + pending order. Public so guests can buy; the stall is derived from the cart's variants, never from the caller's token |
 | `POST /api/upload/product-image`                    | ✅               | Cloudinary product image upload                              |
 | `POST /webhooks/stripe`                             | Stripe signature | Marks orders paid, handles expiry/failure                    |
 | `POST /webhooks/resend`                             | Resend signature | Delivery, bounce and complaint events                        |
@@ -185,8 +240,16 @@ authenticated by signature instead.
 | Hire Me       | `myCreatorProfile`, `creatorProfile`, `booking`                  | `updateCreatorProfile`, `createCreatorService`, `createBooking`, `acceptBooking`, `declineBooking`, `deliverBooking`, `completeBooking`, `sendBookingMessage`, `generateStripeOnboardingLink` |
 | AI            | `aiStats`, `productsMissingCopy`, `recommendedProducts`          | `generateProductCopy`, `indexAllProducts`, `processNewTickets`                     |
 | Mobile        | —                                                                | `registerDeviceToken`                                                              |
+| Marketplace   | `stores`, `storeCategories`, `store`, `myStore`, `myOrders`      | `updateStoreProfile`, `submitStoreForReview`, `acceptTerms`                        |
+| Platform admin| `platformStats`, `adminStores`, `storeModerationHistory`         | `approveStore`, `rejectStore`, `suspendStore`, `restoreStore`, `setStoreRestrictions` |
 
-Schema: [`backend/graph/schema.graphqls`](backend/graph/schema.graphqls)
+Schema: [`backend/graph/schema.graphqls`](backend/graph/schema.graphqls) and
+[`backend/graph/marketplace.graphqls`](backend/graph/marketplace.graphqls)
+
+**Token scopes.** Access tokens carry a `scope` claim (`tenant`, `buyer` or
+`admin`) and the middleware refuses a token minted for a different audience —
+a buyer token on a seller endpoint is a `403`, not a `401`. Tokens issued
+before scopes existed decode as `tenant`, which is what they were.
 
 ## Documentation
 

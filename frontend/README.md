@@ -1,46 +1,70 @@
-# Getting Started with Create React App
+# Ownstall — web app
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+React 19 + TypeScript (Create React App), Tailwind CSS, Apollo Client v4.
+Serves all three Ownstall audiences from one bundle.
 
-## Available Scripts
+See the [root README](../README.md) for the platform overview and full local
+setup.
 
-In the project directory, you can run:
+## Run it
 
-### `npm start`
+```bash
+npm install
+cp .env.example .env    # point REACT_APP_* at your local API
+npm start               # http://localhost:3000
+```
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+The API must be running on the URL in `REACT_APP_API_URL` (default
+`http://localhost:8080`). CRA bakes `REACT_APP_*` in at **build time** — change
+one and you must restart `npm start` or rebuild.
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+| Script             | What it does                    |
+| ------------------ | ------------------------------- |
+| `npm start`        | Dev server with fast refresh    |
+| `npm run build`    | Production bundle into `build/` |
+| `npm test`         | Jest + Testing Library          |
+| `npx tsc --noEmit` | Typecheck without emitting      |
 
-### `npm test`
+## Routes
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+| Path                                | Audience | Notes                                                                                                   |
+| ----------------------------------- | -------- | ------------------------------------------------------------------------------------------------------- |
+| `/`                                 | public   | Landing page                                                                                            |
+| `/stores`                           | public   | Stall directory — search, category, sort, paging. State lives in the URL, so a result page is shareable |
+| `/store?store=<subdomain>`          | public   | A stall's storefront                                                                                    |
+| `/cart`, `/order/success`           | public   | Guest or signed-in checkout                                                                             |
+| `/about`, `/contact`                | public   | Company pages                                                                                           |
+| `/terms`, `/privacy`                | public   | Legal                                                                                                   |
+| `/signup`, `/login`                 | seller   | Open a stall / sign in                                                                                  |
+| `/admin/*`                          | seller   | Dashboard — products, orders, notify, reply, hire, production, AI                                       |
+| `/account/signup`, `/account/login` | buyer    | Shopper accounts                                                                                        |
+| `/account`                          | buyer    | Order history across every stall                                                                        |
+| `/platform/login`, `/platform`      | operator | Approval queue, moderation, platform stats                                                               |
 
-### `npm run build`
+## Sessions
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+Three audiences can be signed in at once — a seller shopping on someone else's
+stall is a normal thing to do — so [`src/lib/session.ts`](src/lib/session.ts)
+keeps one token set per scope under separate `localStorage` keys.
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+Which scope a request uses is decided by **the route**, not by which tokens
+happen to exist: `/platform/*` uses the operator token, `/admin/*` the seller
+token, everything else the buyer token (absent for guests). `RequireAuth` gates
+routes. [`src/lib/apollo.ts`](src/lib/apollo.ts) refreshes an expired token once
+and retries the failed request, and only redirects to a sign-in page if the
+visitor actually had a session — a guest hitting a protected field sees the
+error instead of being bounced somewhere they never asked to go.
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+## Theme
 
-### `npm run eject`
+The palette lives in [`tailwind.config.js`](tailwind.config.js) — teal `brand`,
+amber `accent`, and an `ink` neutral scale that also overrides Tailwind's
+default `gray` so existing pages inherit it. `src/index.css` mirrors the same
+values as CSS variables. Keep it in step with `mobile/src/theme.ts`.
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+Semantic colours (`green` for paid/in-stock, `red` for errors, `amber` for
+warnings) are deliberately **not** part of the brand scale — a "paid" badge
+must not change meaning because the brand colour changed.
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
-
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
+The logo is [`src/components/Logo.tsx`](src/components/Logo.tsx); the favicon
+and PWA icons in `public/` are drawn from the same 48-unit geometry.
